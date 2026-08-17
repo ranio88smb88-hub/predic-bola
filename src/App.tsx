@@ -12,7 +12,13 @@ import { WALLPAPER_OPTIONS } from "./data/wallpapers";
 import { MATCH_TEMPLATES, MatchTemplate } from "./data/templates";
 import { parseMatchScript } from "./utils/parser";
 import { generateEmbedHtml } from "./utils/scriptGenerator";
-import { batchResolveTeamLogos } from "./data/teamLogos";
+import {
+  batchResolveTeamLogos,
+  getStoredCustomLogos,
+  getStoredDatabaseUrl,
+  setStoredCustomLogos,
+  setStoredDatabaseUrl,
+} from "./data/teamLogos";
 import { AppSettings, MatchGroup, MatchItem } from "./types";
 import { DEFAULT_SITE_LOGO_URL, DEFAULT_SITE_NAME, DEFAULT_KEYWORDS_TEXT } from "./data/branding";
 
@@ -74,7 +80,7 @@ export default function App() {
   const [activeSourceModal, setActiveSourceModal] = useState<number | null>(null);
 
   // App Settings with Site Branding & Special Match Controls
-  const [settings, setSettings] = useState<AppSettings>({
+  const [settings, setSettings] = useState<AppSettings>(() => ({
     headerDate: "TUESDAY, 28 JULY 2026",
     selectedThemeId: "soft-royal-gold",
     selectedWallpaperId: "night-stadium",
@@ -94,7 +100,9 @@ export default function App() {
     showMarketDetails: true,
     expandAllByDefault: false,
     targetPlatform: "blogger",
-  });
+    logoDatabaseUrl: getStoredDatabaseUrl(),
+    customTeamLogos: getStoredCustomLogos(),
+  }));
 
   // Derived current Theme & Wallpaper
   const currentTheme = useMemo(() => {
@@ -110,33 +118,44 @@ export default function App() {
   const [totalDetected, setTotalDetected] = useState<number>(0);
 
   // Logo resolver helper
-  const syncLogosForGroups = useCallback(async (groups: MatchGroup[]) => {
-    const teamNames: string[] = [];
-    groups.forEach((g) => {
-      g.matches.forEach((m) => {
-        if (m.homeTeam) teamNames.push(m.homeTeam);
-        if (m.awayTeam) teamNames.push(m.awayTeam);
+  const syncLogosForGroups = useCallback(
+    async (
+      groups: MatchGroup[],
+      customDbUrl?: string,
+      customLogos?: Record<string, string>
+    ) => {
+      const teamNames: string[] = [];
+      groups.forEach((g) => {
+        g.matches.forEach((m) => {
+          if (m.homeTeam) teamNames.push(m.homeTeam);
+          if (m.awayTeam) teamNames.push(m.awayTeam);
+        });
       });
-    });
 
-    if (teamNames.length === 0) return;
+      if (teamNames.length === 0) return;
 
-    try {
-      const resolved = await batchResolveTeamLogos(teamNames);
-      setParsedGroups((prev) =>
-        prev.map((g) => ({
-          ...g,
-          matches: g.matches.map((m) => ({
-            ...m,
-            homeLogo: resolved[m.homeTeam] || m.homeLogo,
-            awayLogo: resolved[m.awayTeam] || m.awayLogo,
-          })),
-        }))
-      );
-    } catch (e) {
-      console.warn("Logo sync error:", e);
-    }
-  }, []);
+      try {
+        const resolved = await batchResolveTeamLogos(
+          teamNames,
+          customDbUrl || settings.logoDatabaseUrl,
+          customLogos || settings.customTeamLogos
+        );
+        setParsedGroups((prev) =>
+          prev.map((g) => ({
+            ...g,
+            matches: g.matches.map((m) => ({
+              ...m,
+              homeLogo: resolved[m.homeTeam] || m.homeLogo,
+              awayLogo: resolved[m.awayTeam] || m.awayLogo,
+            })),
+          }))
+        );
+      } catch (e) {
+        console.warn("Logo sync error:", e);
+      }
+    },
+    [settings.logoDatabaseUrl, settings.customTeamLogos]
+  );
 
   // Auto-parse on load and when rawScriptText changes
   useEffect(() => {
@@ -144,9 +163,19 @@ export default function App() {
     setParsedGroups(groups);
     setTotalDetected(totalMatches);
 
-    // Asynchronously resolve real CDN badges from the 29,648+ database
+    // Asynchronously resolve real CDN badges from the database
     syncLogosForGroups(groups);
   }, [rawScriptText, syncLogosForGroups]);
+
+  // Periodic check to ensure late-loading backend logos are synced
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (parsedGroups.length > 0) {
+        syncLogosForGroups(parsedGroups);
+      }
+    }, 4000);
+    return () => clearTimeout(timer);
+  }, [parsedGroups.length, syncLogosForGroups]);
 
   // Handle Generate Script CTA
   const handleGenerateScript = async () => {
@@ -191,7 +220,27 @@ export default function App() {
 
   // Settings update
   const handleUpdateSettings = (newSettings: Partial<AppSettings>) => {
-    setSettings((prev) => ({ ...prev, ...newSettings }));
+    if (newSettings.logoDatabaseUrl !== undefined) {
+      setStoredDatabaseUrl(newSettings.logoDatabaseUrl);
+    }
+    if (newSettings.customTeamLogos !== undefined) {
+      setStoredCustomLogos(newSettings.customTeamLogos);
+    }
+
+    setSettings((prev) => {
+      const updated = { ...prev, ...newSettings };
+      if (
+        newSettings.logoDatabaseUrl !== undefined ||
+        newSettings.customTeamLogos !== undefined
+      ) {
+        syncLogosForGroups(
+          parsedGroups,
+          updated.logoDatabaseUrl,
+          updated.customTeamLogos
+        );
+      }
+      return updated;
+    });
   };
 
   // Generated standalone HTML code

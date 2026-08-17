@@ -75,6 +75,8 @@ export interface AppSettings {
   showMarketDetails: boolean;
   expandAllByDefault: boolean;
   targetPlatform: "blogger" | "wordpress" | "html" | "forum";
+  logoDatabaseUrl?: string;
+  customTeamLogos?: Record<string, string>;
 }
 
 export interface TeamLogoItem {

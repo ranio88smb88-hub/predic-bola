@@ -6,14 +6,18 @@ import { GoogleGenAI } from "@google/genai";
 
 dotenv.config();
 
-const GOOGLE_SHEETS_LOGO_API =
+const DEFAULT_GOOGLE_SHEETS_LOGO_API =
   "https://script.google.com/macros/s/AKfycbwdiqK2HCNvDdlcZmwIUIbds2pNZyV22Bp3kW_gN-6qkXdWXJUcc7rigs2-jRPJMS7-/exec";
+
+let currentDatabaseUrl = process.env.LOGO_DATABASE_URL || DEFAULT_GOOGLE_SHEETS_LOGO_API;
 
 // In-memory team logos cache & index
 let teamLogosMap = new Map<string, string>();
+let customUserLogosMap = new Map<string, string>();
 let teamLogosList: Array<{ name: string; url: string }> = [];
 let isLogoDatabaseLoaded = false;
 let isLogoDatabaseLoading = false;
+let loadPromise: Promise<void> | null = null;
 
 // Preload known national and major club aliases
 const POPULAR_ALIASES: Record<string, string[]> = {
@@ -48,31 +52,69 @@ const POPULAR_ALIASES: Record<string, string[]> = {
   "atletico madrid": ["atletico", "atlético madrid"],
 };
 
-async function loadTeamLogosDatabase() {
-  if (isLogoDatabaseLoading) return;
+async function loadTeamLogosDatabase(targetUrl?: string) {
+  if (targetUrl) {
+    currentDatabaseUrl = targetUrl;
+  }
+  if (isLogoDatabaseLoading && loadPromise) {
+    return loadPromise;
+  }
+
   isLogoDatabaseLoading = true;
-  console.log("Fetching team logos from Google Apps Script database...");
-  try {
-    const res = await fetch(GOOGLE_SHEETS_LOGO_API);
-    const data = await res.json();
-    if (data && Array.isArray(data.data)) {
+  console.log(`Fetching team logos from database URL: ${currentDatabaseUrl}...`);
+
+  loadPromise = (async () => {
+    try {
+      const res = await fetch(currentDatabaseUrl, {
+        headers: {
+          "Accept": "application/json, text/plain, */*",
+          "User-Agent": "Mozilla/5.0 (compatible; RoyalPredictionApp/1.0)",
+        },
+      });
+
+      if (!res.ok) {
+        throw new Error(`HTTP error ${res.status}: ${res.statusText}`);
+      }
+
+      const rawData = await res.json();
       const newMap = new Map<string, string>();
       const list: Array<{ name: string; url: string }> = [];
 
-      for (const item of data.data) {
-        if (item.name && item.url) {
-          const rawName = String(item.name).trim();
-          const cleanName = rawName.toLowerCase();
-          const logoUrl = String(item.url).trim();
+      // Helper to insert item
+      const insertItem = (name: any, url: any) => {
+        if (!name || !url) return;
+        const rawName = String(name).trim();
+        const cleanName = rawName.toLowerCase();
+        const logoUrl = String(url).trim();
+        if (cleanName.length > 0 && (logoUrl.startsWith("http") || logoUrl.startsWith("data:image/"))) {
+          newMap.set(cleanName, logoUrl);
+          list.push({ name: rawName, url: logoUrl });
+        }
+      };
 
-          if (cleanName.length > 0 && logoUrl.startsWith("http")) {
-            newMap.set(cleanName, logoUrl);
-            list.push({ name: rawName, url: logoUrl });
+      // Support various JSON payload formats
+      if (rawData && Array.isArray(rawData.data)) {
+        for (const item of rawData.data) {
+          insertItem(item.name || item.team || item.Team || item.club, item.url || item.logo || item.Logo || item.badge);
+        }
+      } else if (Array.isArray(rawData)) {
+        for (const item of rawData) {
+          if (typeof item === "object" && item !== null) {
+            insertItem(item.name || item.team || item.Team || item.club, item.url || item.logo || item.Logo || item.badge);
+          }
+        }
+      } else if (rawData && typeof rawData === "object") {
+        for (const [k, v] of Object.entries(rawData)) {
+          if (typeof v === "string") {
+            insertItem(k, v);
+          } else if (typeof v === "object" && v !== null) {
+            const valObj = v as any;
+            insertItem(valObj.name || k, valObj.url || valObj.logo || valObj.badge);
           }
         }
       }
 
-      // Add aliases
+      // Add popular aliases
       for (const [canonical, aliases] of Object.entries(POPULAR_ALIASES)) {
         const canonicalUrl = newMap.get(canonical);
         if (canonicalUrl) {
@@ -87,13 +129,15 @@ async function loadTeamLogosDatabase() {
       teamLogosMap = newMap;
       teamLogosList = list;
       isLogoDatabaseLoaded = true;
-      console.log(`Successfully loaded ${newMap.size} team logos into memory.`);
+      console.log(`Successfully indexed ${newMap.size} team logos from database.`);
+    } catch (err) {
+      console.error("Error loading team logos database:", err);
+    } finally {
+      isLogoDatabaseLoading = false;
     }
-  } catch (err) {
-    console.error("Error loading team logos database:", err);
-  } finally {
-    isLogoDatabaseLoading = false;
-  }
+  })();
+
+  return loadPromise;
 }
 
 // Initial async load
@@ -103,7 +147,7 @@ async function startServer() {
   const app = express();
   const PORT = 3000;
 
-  app.use(express.json({ limit: "10mb" }));
+  app.use(express.json({ limit: "15mb" }));
 
   // Initialize Gemini AI client lazily
   let aiClient: GoogleGenAI | null = null;
@@ -127,7 +171,8 @@ async function startServer() {
       status: "ok",
       timestamp: new Date().toISOString(),
       logosLoaded: isLogoDatabaseLoaded,
-      totalLogos: teamLogosMap.size,
+      totalLogos: teamLogosMap.size + customUserLogosMap.size,
+      databaseUrl: currentDatabaseUrl,
     });
   });
 
@@ -137,23 +182,94 @@ async function startServer() {
       loaded: isLogoDatabaseLoaded,
       loading: isLogoDatabaseLoading,
       count: teamLogosMap.size,
-      source: GOOGLE_SHEETS_LOGO_API,
+      customCount: customUserLogosMap.size,
+      total: teamLogosMap.size + customUserLogosMap.size,
+      source: currentDatabaseUrl,
+    });
+  });
+
+  // Configuration endpoint (sets custom database URL and/or custom logo mappings)
+  app.post("/api/logos/config", async (req, res) => {
+    const { databaseUrl, customLogos, reload } = req.body;
+
+    if (customLogos && typeof customLogos === "object") {
+      for (const [team, url] of Object.entries(customLogos)) {
+        if (typeof team === "string" && typeof url === "string") {
+          const cleanName = team.trim().toLowerCase();
+          const cleanUrl = url.trim();
+          if (cleanName && cleanUrl) {
+            customUserLogosMap.set(cleanName, cleanUrl);
+          }
+        }
+      }
+    }
+
+    if (databaseUrl && typeof databaseUrl === "string" && databaseUrl.trim().startsWith("http")) {
+      currentDatabaseUrl = databaseUrl.trim();
+      if (reload !== false) {
+        await loadTeamLogosDatabase(currentDatabaseUrl);
+      }
+    } else if (reload === true) {
+      await loadTeamLogosDatabase();
+    }
+
+    res.json({
+      success: true,
+      count: teamLogosMap.size,
+      customCount: customUserLogosMap.size,
+      total: teamLogosMap.size + customUserLogosMap.size,
+      source: currentDatabaseUrl,
     });
   });
 
   app.post("/api/logos/reload", async (req, res) => {
-    await loadTeamLogosDatabase();
+    const { databaseUrl } = req.body || {};
+    if (databaseUrl && typeof databaseUrl === "string" && databaseUrl.trim().startsWith("http")) {
+      currentDatabaseUrl = databaseUrl.trim();
+    }
+    await loadTeamLogosDatabase(currentDatabaseUrl);
     res.json({
       success: true,
       count: teamLogosMap.size,
+      customCount: customUserLogosMap.size,
+      total: teamLogosMap.size + customUserLogosMap.size,
+      source: currentDatabaseUrl,
     });
   });
 
   // Logos Batch Resolver Endpoint
-  app.post("/api/logos/resolve", (req, res) => {
-    const { teamNames } = req.body;
+  app.post("/api/logos/resolve", async (req, res) => {
+    const { teamNames, customLogos, customDatabaseUrl } = req.body;
     if (!Array.isArray(teamNames)) {
       return res.status(400).json({ error: "teamNames must be an array" });
+    }
+
+    // Ingest on-the-fly custom logos if sent in request
+    if (customLogos && typeof customLogos === "object") {
+      for (const [team, url] of Object.entries(customLogos)) {
+        if (typeof team === "string" && typeof url === "string") {
+          const cleanName = team.trim().toLowerCase();
+          const cleanUrl = url.trim();
+          if (cleanName && cleanUrl) {
+            customUserLogosMap.set(cleanName, cleanUrl);
+          }
+        }
+      }
+    }
+
+    // If custom database URL requested and different from current, trigger fetch
+    if (customDatabaseUrl && customDatabaseUrl !== currentDatabaseUrl && customDatabaseUrl.startsWith("http")) {
+      await loadTeamLogosDatabase(customDatabaseUrl);
+    } else if (isLogoDatabaseLoading && loadPromise) {
+      // If database is still loading on initial boot, wait up to 4s
+      try {
+        await Promise.race([
+          loadPromise,
+          new Promise((resolve) => setTimeout(resolve, 4000)),
+        ]);
+      } catch (e) {
+        console.warn("Timed out waiting for initial logo database load:", e);
+      }
     }
 
     const results: Record<string, string | null> = {};
@@ -163,17 +279,25 @@ async function startServer() {
       const clean = rawName.trim().toLowerCase();
       const stripped = clean.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
 
-      let matchedUrl = teamLogosMap.get(clean) || teamLogosMap.get(stripped);
+      // 1. Highest priority: User's custom inputted logos
+      let matchedUrl = customUserLogosMap.get(clean) || customUserLogosMap.get(stripped);
 
+      // 2. Database exact & stripped match
       if (!matchedUrl) {
-        // Try common prefix or suffix removal (e.g., "FC", "CF", "SC", "AC")
+        matchedUrl = teamLogosMap.get(clean) || teamLogosMap.get(stripped);
+      }
+
+      // 3. Prefix and suffix normalization
+      if (!matchedUrl) {
         const withoutPrefix = clean
-          .replace(/^(fc|cf|ac|as|sc|ca|cr|rc|cd|afc|fk)\s+/, "")
-          .replace(/\s+(fc|cf|sc|ac|de cordoba|praha|prague|u23|u21|u20)$/, "")
+          .replace(/^(fc|cf|ac|as|sc|ca|cr|rc|cd|afc|fk|sk|ss|us|bk)\s+/, "")
+          .replace(/\s+(fc|cf|sc|ac|de cordoba|praha|prague|u23|u21|u20|u19)$/, "")
           .trim();
 
-        if (withoutPrefix && teamLogosMap.has(withoutPrefix)) {
-          matchedUrl = teamLogosMap.get(withoutPrefix);
+        if (withoutPrefix) {
+          matchedUrl =
+            customUserLogosMap.get(withoutPrefix) ||
+            teamLogosMap.get(withoutPrefix);
         }
       }
 
@@ -186,15 +310,23 @@ async function startServer() {
   // Logos Search endpoint for autocomplete
   app.get("/api/logos/search", (req, res) => {
     const query = String(req.query.q || "").toLowerCase().trim();
+    const customList = Array.from(customUserLogosMap.entries()).map(([name, url]) => ({
+      name: name.toUpperCase(),
+      url,
+      isCustom: true,
+    }));
+
     if (!query) {
-      return res.json({ results: teamLogosList.slice(0, 30) });
+      return res.json({ results: [...customList, ...teamLogosList.slice(0, 30)] });
     }
 
-    const matched = teamLogosList
+    const matchedCustom = customList.filter((item) => item.name.toLowerCase().includes(query));
+    const matchedDb = teamLogosList
       .filter((item) => item.name.toLowerCase().includes(query))
       .slice(0, 40);
 
-    res.json({ results: matched, totalMatched: matched.length });
+    const merged = [...matchedCustom, ...matchedDb];
+    res.json({ results: merged, totalMatched: merged.length });
   });
 
   // AI Match Parser / Prediction Generator endpoint

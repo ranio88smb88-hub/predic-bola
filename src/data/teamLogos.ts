@@ -1,6 +1,67 @@
 // Real Vector Crests, FlagCDN mapping, and Google Apps Script Team Logo Database integration
 
+export const CUSTOM_LOGOS_STORAGE_KEY = "royal_custom_team_logos";
+export const DATABASE_URL_STORAGE_KEY = "royal_logo_database_url";
+export const DEFAULT_DATABASE_URL =
+  "https://script.google.com/macros/s/AKfycbwdiqK2HCNvDdlcZmwIUIbds2pNZyV22Bp3kW_gN-6qkXdWXJUcc7rigs2-jRPJMS7-/exec";
+
 const LOGO_CACHE = new Map<string, string>();
+
+/**
+ * Retrieve user custom team logos from localStorage
+ */
+export function getStoredCustomLogos(): Record<string, string> {
+  if (typeof window === "undefined") return {};
+  try {
+    const raw = localStorage.getItem(CUSTOM_LOGOS_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.warn("Failed to read custom team logos from storage:", e);
+    return {};
+  }
+}
+
+/**
+ * Save user custom team logos to localStorage and in-memory cache
+ */
+export function setStoredCustomLogos(logos: Record<string, string>): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(CUSTOM_LOGOS_STORAGE_KEY, JSON.stringify(logos));
+    for (const [team, url] of Object.entries(logos)) {
+      if (team && url) {
+        LOGO_CACHE.set(team.toLowerCase().trim(), url);
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to save custom team logos to storage:", e);
+  }
+}
+
+/**
+ * Retrieve custom database URL from localStorage
+ */
+export function getStoredDatabaseUrl(): string {
+  if (typeof window === "undefined") return DEFAULT_DATABASE_URL;
+  try {
+    const val = localStorage.getItem(DATABASE_URL_STORAGE_KEY);
+    return val && val.trim().startsWith("http") ? val.trim() : DEFAULT_DATABASE_URL;
+  } catch (e) {
+    return DEFAULT_DATABASE_URL;
+  }
+}
+
+/**
+ * Save custom database URL to localStorage
+ */
+export function setStoredDatabaseUrl(url: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(DATABASE_URL_STORAGE_KEY, url.trim());
+  } catch (e) {
+    console.warn("Failed to save custom database URL:", e);
+  }
+}
 
 // Preloaded known national flags and high-profile teams for instant synchronous rendering
 export const INSTANT_NATIONAL_FLAGS: Record<string, string> = {
@@ -61,25 +122,34 @@ export const INSTANT_CLUB_CRESTS: Record<string, string> = {
 };
 
 /**
- * Synchronous logo URL resolver (returns instant CDN, cached URL, or dynamic SVG)
+ * Synchronous logo URL resolver (returns instant CDN, user custom logo, cached URL, or dynamic SVG)
  */
 export function getTeamLogoUrl(teamName: string): string {
   if (!teamName) return generateVectorLogoSvg("FC");
   const normalized = teamName.toLowerCase().trim();
 
-  // Check in-memory cache
+  // 1. Check user custom logos
+  const customLogos = getStoredCustomLogos();
+  if (customLogos[normalized]) {
+    return customLogos[normalized];
+  }
+  for (const [k, v] of Object.entries(customLogos)) {
+    if (k.toLowerCase().trim() === normalized) return v;
+  }
+
+  // 2. Check in-memory cache
   if (LOGO_CACHE.has(normalized)) {
     return LOGO_CACHE.get(normalized)!;
   }
 
-  // Check instant national flag
+  // 3. Check instant national flag
   if (INSTANT_NATIONAL_FLAGS[normalized]) {
     const url = INSTANT_NATIONAL_FLAGS[normalized];
     LOGO_CACHE.set(normalized, url);
     return url;
   }
 
-  // Check instant club crests
+  // 4. Check instant club crests
   if (INSTANT_CLUB_CRESTS[normalized]) {
     const url = INSTANT_CLUB_CRESTS[normalized];
     LOGO_CACHE.set(normalized, url);
@@ -95,13 +165,28 @@ export function getTeamLogoUrl(teamName: string): string {
 /**
  * Batch resolve team logos from backend API / Google Sheet database
  */
-export async function batchResolveTeamLogos(teamNames: string[]): Promise<Record<string, string>> {
+export async function batchResolveTeamLogos(
+  teamNames: string[],
+  overrideDbUrl?: string,
+  overrideCustomLogos?: Record<string, string>
+): Promise<Record<string, string>> {
+  const customLogos = overrideCustomLogos || getStoredCustomLogos();
+  const dbUrl = overrideDbUrl || getStoredDatabaseUrl();
   const unresolved: string[] = [];
   const results: Record<string, string> = {};
 
   for (const name of teamNames) {
     if (!name) continue;
     const clean = name.toLowerCase().trim();
+
+    // Check user custom mapping first
+    if (customLogos[clean] || customLogos[name]) {
+      const customUrl = customLogos[clean] || customLogos[name];
+      LOGO_CACHE.set(clean, customUrl);
+      results[name] = customUrl;
+      continue;
+    }
+
     if (LOGO_CACHE.has(clean) && !LOGO_CACHE.get(clean)?.startsWith("data:image/svg+xml")) {
       results[name] = LOGO_CACHE.get(clean)!;
     } else {
@@ -117,14 +202,18 @@ export async function batchResolveTeamLogos(teamNames: string[]): Promise<Record
     const res = await fetch("/api/logos/resolve", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ teamNames: unresolved }),
+      body: JSON.stringify({
+        teamNames: unresolved,
+        customLogos,
+        customDatabaseUrl: dbUrl,
+      }),
     });
 
     if (res.ok) {
       const data = await res.json();
       if (data.success && data.results) {
         for (const [team, url] of Object.entries(data.results)) {
-          if (url && typeof url === "string" && url.startsWith("http")) {
+          if (url && typeof url === "string" && (url.startsWith("http") || url.startsWith("data:image/"))) {
             LOGO_CACHE.set(team.toLowerCase().trim(), url);
             results[team] = url;
           } else {
@@ -132,9 +221,45 @@ export async function batchResolveTeamLogos(teamNames: string[]): Promise<Record
           }
         }
       }
+    } else {
+      // Fallback to local resolver if server error
+      for (const team of unresolved) {
+        results[team] = getTeamLogoUrl(team);
+      }
     }
   } catch (err) {
-    console.warn("Could not batch resolve logos from API, using cached & local fallbacks:", err);
+    console.warn("Could not batch resolve logos from API, attempting direct client fetch or local fallbacks:", err);
+    
+    // Direct client fetch fallback
+    try {
+      if (dbUrl && typeof window !== "undefined") {
+        const clientRes = await fetch(dbUrl, { mode: "cors" });
+        if (clientRes.ok) {
+          const rawClient = await clientRes.json();
+          const items: any[] = Array.isArray(rawClient.data) ? rawClient.data : Array.isArray(rawClient) ? rawClient : [];
+          const directMap = new Map<string, string>();
+          for (const it of items) {
+            const n = String(it.name || it.team || it.Team || "").trim().toLowerCase();
+            const u = String(it.url || it.logo || it.Logo || "").trim();
+            if (n && u) directMap.set(n, u);
+          }
+          for (const team of unresolved) {
+            const c = team.toLowerCase().trim();
+            if (directMap.has(c)) {
+              results[team] = directMap.get(c)!;
+              LOGO_CACHE.set(c, directMap.get(c)!);
+              continue;
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    for (const team of unresolved) {
+      if (!results[team]) {
+        results[team] = getTeamLogoUrl(team);
+      }
+    }
   }
 
   return results;
