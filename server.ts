@@ -52,6 +52,59 @@ const POPULAR_ALIASES: Record<string, string[]> = {
   "atletico madrid": ["atletico", "atlético madrid"],
 };
 
+function stripTeamBrackets(name: string): string {
+  if (!name || typeof name !== "string") return "";
+  let clean = name.trim();
+  let prev = "";
+  while (prev !== clean) {
+    prev = clean;
+    clean = clean.replace(/^[\[\(][\w\d\s\.\,\-\+\#]+[\]\)]\s*/, "");
+    clean = clean.replace(/^\d+[\.\-\)]\s*/, "");
+    clean = clean.replace(/\s*[\[\(][\w\d\s\.\,\-\+\#]+[\]\)]$/, "");
+    clean = clean.replace(/\s*[\-\–]\s*(?:N|Neutral|W|A|H)$/i, "");
+  }
+  return clean.trim() || name.trim();
+}
+
+function getTeamCandidates(rawName: string): string[] {
+  if (!rawName || typeof rawName !== "string") return [];
+  const set = new Set<string>();
+
+  const lower = rawName.toLowerCase().trim();
+  if (lower) set.add(lower);
+
+  const stripped = stripTeamBrackets(rawName).toLowerCase().trim();
+  if (stripped) set.add(stripped);
+
+  const alpha = stripped.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  if (alpha) set.add(alpha);
+
+  const rawAlpha = lower.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  if (rawAlpha) set.add(rawAlpha);
+
+  const withoutPrefix = stripped
+    .replace(/^(fc|cf|ac|as|sc|ca|cr|rc|cd|afc|fk|sk|ss|us|bk)\s+/, "")
+    .replace(/\s+(fc|cf|sc|ac|de cordoba|praha|prague|u23|u21|u20|u19)$/, "")
+    .trim();
+  if (withoutPrefix && withoutPrefix.length >= 3) {
+    set.add(withoutPrefix);
+  }
+
+  // Handle trailing regional/state suffixes (e.g. "Goias GO" -> "Goias", "Santos SP" -> "Santos")
+  const parts = stripped.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const lastWord = parts[parts.length - 1];
+    if (lastWord.length <= 3) {
+      const withoutLast = parts.slice(0, -1).join(" ").trim();
+      if (withoutLast.length >= 3) {
+        set.add(withoutLast);
+      }
+    }
+  }
+
+  return Array.from(set);
+}
+
 async function loadTeamLogosDatabase(targetUrl?: string, forceReload: boolean = false) {
   if (targetUrl) {
     if (targetUrl !== currentDatabaseUrl) {
@@ -100,6 +153,11 @@ async function loadTeamLogosDatabase(targetUrl?: string, forceReload: boolean = 
         if (cleanName.length > 0 && (logoUrl.startsWith("http") || logoUrl.startsWith("data:image/"))) {
           newMap.set(cleanName, logoUrl);
           list.push({ name: rawName, url: logoUrl });
+
+          const stripped = stripTeamBrackets(cleanName).toLowerCase().trim();
+          if (stripped && stripped !== cleanName && !newMap.has(stripped)) {
+            newMap.set(stripped, logoUrl);
+          }
         }
       };
 
@@ -290,28 +348,21 @@ async function startServer() {
 
     for (const rawName of teamNames) {
       if (typeof rawName !== "string") continue;
-      const clean = rawName.trim().toLowerCase();
-      const stripped = clean.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+      const candidates = getTeamCandidates(rawName);
+
+      let matchedUrl: string | undefined;
 
       // 1. Highest priority: User's custom inputted logos
-      let matchedUrl = customUserLogosMap.get(clean) || customUserLogosMap.get(stripped);
-
-      // 2. Database exact & stripped match
-      if (!matchedUrl) {
-        matchedUrl = teamLogosMap.get(clean) || teamLogosMap.get(stripped);
+      for (const c of candidates) {
+        matchedUrl = customUserLogosMap.get(c);
+        if (matchedUrl) break;
       }
 
-      // 3. Prefix and suffix normalization
+      // 2. Database map match across all candidate variations (raw, bracket-stripped, alphanumeric, prefixes)
       if (!matchedUrl) {
-        const withoutPrefix = clean
-          .replace(/^(fc|cf|ac|as|sc|ca|cr|rc|cd|afc|fk|sk|ss|us|bk)\s+/, "")
-          .replace(/\s+(fc|cf|sc|ac|de cordoba|praha|prague|u23|u21|u20|u19)$/, "")
-          .trim();
-
-        if (withoutPrefix) {
-          matchedUrl =
-            customUserLogosMap.get(withoutPrefix) ||
-            teamLogosMap.get(withoutPrefix);
+        for (const c of candidates) {
+          matchedUrl = teamLogosMap.get(c);
+          if (matchedUrl) break;
         }
       }
 
@@ -323,20 +374,29 @@ async function startServer() {
 
   // Logos Search endpoint for autocomplete
   app.get("/api/logos/search", (req, res) => {
-    const query = String(req.query.q || "").toLowerCase().trim();
+    const rawQuery = String(req.query.q || "").toLowerCase().trim();
+    const cleanQuery = stripTeamBrackets(rawQuery).toLowerCase().trim() || rawQuery;
     const customList = Array.from(customUserLogosMap.entries()).map(([name, url]) => ({
       name: name.toUpperCase(),
       url,
       isCustom: true,
     }));
 
-    if (!query) {
+    if (!rawQuery) {
       return res.json({ results: [...customList, ...teamLogosList.slice(0, 30)] });
     }
 
-    const matchedCustom = customList.filter((item) => item.name.toLowerCase().includes(query));
+    const matchedCustom = customList.filter(
+      (item) =>
+        item.name.toLowerCase().includes(rawQuery) ||
+        item.name.toLowerCase().includes(cleanQuery)
+    );
     const matchedDb = teamLogosList
-      .filter((item) => item.name.toLowerCase().includes(query))
+      .filter(
+        (item) =>
+          item.name.toLowerCase().includes(rawQuery) ||
+          item.name.toLowerCase().includes(cleanQuery)
+      )
       .slice(0, 40);
 
     const merged = [...matchedCustom, ...matchedDb];

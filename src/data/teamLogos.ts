@@ -8,6 +8,77 @@ export const DEFAULT_DATABASE_URL =
 const LOGO_CACHE = new Map<string, string>();
 let isIndexedDbLoaded = false;
 
+/**
+ * Strip prefix/suffix brackets such as [10], [n], (10), (n), [w], [U21], 1., etc.
+ * Examples:
+ *  - "Levski Sofia [n]" -> "Levski Sofia"
+ *  - "[10] Goias GO" -> "Goias GO"
+ *  - "[10] Goias GO [n]" -> "Goias GO"
+ *  - "(10) Goias GO" -> "Goias GO"
+ *  - "1. FC Koln" -> "FC Koln"
+ */
+export function stripTeamBrackets(name: string): string {
+  if (!name || typeof name !== "string") return "";
+  let clean = name.trim();
+
+  let prev = "";
+  while (prev !== clean) {
+    prev = clean;
+    // Strip leading brackets: [10], (10), [N], [w], [U21], 1., etc.
+    clean = clean.replace(/^[\[\(][\w\d\s\.\,\-\+\#]+[\]\)]\s*/, "");
+    clean = clean.replace(/^\d+[\.\-\)]\s*/, "");
+    // Strip trailing brackets: [n], [N], (n), [10], (10), [w], [U21], [A], [H], etc.
+    clean = clean.replace(/\s*[\[\(][\w\d\s\.\,\-\+\#]+[\]\)]$/, "");
+    // Strip trailing standalone flags like "- N" or "- Neutral"
+    clean = clean.replace(/\s*[\-\–]\s*(?:N|Neutral|W|A|H)$/i, "");
+  }
+
+  return clean.trim() || name.trim();
+}
+
+/**
+ * Generate candidate search variations for resilient logo matching
+ */
+export function getTeamNameCandidates(rawName: string): string[] {
+  if (!rawName || typeof rawName !== "string") return [];
+  const set = new Set<string>();
+
+  const rawLower = rawName.toLowerCase().trim();
+  if (rawLower) set.add(rawLower);
+
+  const stripped = stripTeamBrackets(rawName).toLowerCase().trim();
+  if (stripped) set.add(stripped);
+
+  const alphanumeric = stripped.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  if (alphanumeric) set.add(alphanumeric);
+
+  const rawAlphanumeric = rawLower.replace(/[^a-z0-9\s]/g, "").replace(/\s+/g, " ").trim();
+  if (rawAlphanumeric) set.add(rawAlphanumeric);
+
+  // Common prefix/suffix stripping (FC, CF, AC, AS, SC, FK, SK, BK, etc.)
+  const withoutPrefix = stripped
+    .replace(/^(fc|cf|ac|as|sc|ca|cr|rc|cd|afc|fk|sk|ss|us|bk)\s+/, "")
+    .replace(/\s+(fc|cf|sc|ac|de cordoba|praha|prague|u23|u21|u20|u19)$/, "")
+    .trim();
+  if (withoutPrefix && withoutPrefix.length >= 3) {
+    set.add(withoutPrefix);
+  }
+
+  // Handle trailing regional/state suffixes (e.g. "Goias GO" -> "Goias", "Santos SP" -> "Santos", "Flamengo RJ" -> "Flamengo")
+  const parts = stripped.split(/\s+/).filter(Boolean);
+  if (parts.length >= 2) {
+    const lastWord = parts[parts.length - 1];
+    if (lastWord.length <= 3) {
+      const withoutLast = parts.slice(0, -1).join(" ").trim();
+      if (withoutLast.length >= 3) {
+        set.add(withoutLast);
+      }
+    }
+  }
+
+  return Array.from(set);
+}
+
 // Lightweight IndexedDB storage for offline persistence of 30,000+ logos
 const DB_NAME = "RoyalPredictionLogoDB";
 const STORE_NAME = "team_logos_cache";
@@ -229,6 +300,12 @@ export async function syncDatabase(
       if (cleanName && (cleanUrl.startsWith("http") || cleanUrl.startsWith("data:image/"))) {
         LOGO_CACHE.set(cleanName, cleanUrl);
         itemsToSave.push({ name: cleanName, url: cleanUrl });
+
+        const stripped = stripTeamBrackets(cleanName).toLowerCase().trim();
+        if (stripped && stripped !== cleanName) {
+          LOGO_CACHE.set(stripped, cleanUrl);
+          itemsToSave.push({ name: stripped, url: cleanUrl });
+        }
       }
     };
 
@@ -359,39 +436,46 @@ export const INSTANT_CLUB_CRESTS: Record<string, string> = {
  */
 export function getTeamLogoUrl(teamName: string): string {
   if (!teamName) return generateVectorLogoSvg("FC");
-  const normalized = teamName.toLowerCase().trim();
-
-  // 1. Check user custom logos
+  const candidates = getTeamNameCandidates(teamName);
   const customLogos = getStoredCustomLogos();
-  if (customLogos[normalized]) {
-    return customLogos[normalized];
-  }
-  for (const [k, v] of Object.entries(customLogos)) {
-    if (k.toLowerCase().trim() === normalized) return v;
+
+  // 1. Check user custom logos with all candidates
+  for (const c of candidates) {
+    if (customLogos[c]) return customLogos[c];
+    for (const [k, v] of Object.entries(customLogos)) {
+      if (k.toLowerCase().trim() === c) return v;
+    }
   }
 
-  // 2. Check in-memory cache
-  if (LOGO_CACHE.has(normalized)) {
-    return LOGO_CACHE.get(normalized)!;
+  // 2. Check in-memory cache with all candidates
+  for (const c of candidates) {
+    if (LOGO_CACHE.has(c)) {
+      return LOGO_CACHE.get(c)!;
+    }
   }
 
-  // 3. Check instant national flag
-  if (INSTANT_NATIONAL_FLAGS[normalized]) {
-    const url = INSTANT_NATIONAL_FLAGS[normalized];
-    LOGO_CACHE.set(normalized, url);
-    return url;
+  // 3. Check instant national flag with all candidates
+  for (const c of candidates) {
+    if (INSTANT_NATIONAL_FLAGS[c]) {
+      const url = INSTANT_NATIONAL_FLAGS[c];
+      LOGO_CACHE.set(c, url);
+      return url;
+    }
   }
 
-  // 4. Check instant club crests
-  if (INSTANT_CLUB_CRESTS[normalized]) {
-    const url = INSTANT_CLUB_CRESTS[normalized];
-    LOGO_CACHE.set(normalized, url);
-    return url;
+  // 4. Check instant club crests with all candidates
+  for (const c of candidates) {
+    if (INSTANT_CLUB_CRESTS[c]) {
+      const url = INSTANT_CLUB_CRESTS[c];
+      LOGO_CACHE.set(c, url);
+      return url;
+    }
   }
 
   // Fallback to crisp luxury SVG vector crest
-  const fallbackSvg = generateVectorLogoSvg(teamName);
-  LOGO_CACHE.set(normalized, fallbackSvg);
+  const cleanForSvg = stripTeamBrackets(teamName);
+  const fallbackSvg = generateVectorLogoSvg(cleanForSvg || teamName);
+  LOGO_CACHE.set(teamName.toLowerCase().trim(), fallbackSvg);
   return fallbackSvg;
 }
 
@@ -410,18 +494,29 @@ export async function batchResolveTeamLogos(
 
   for (const name of teamNames) {
     if (!name) continue;
-    const clean = name.toLowerCase().trim();
+    const candidates = getTeamNameCandidates(name);
+    let matched: string | null = null;
 
     // Check user custom mapping first
-    if (customLogos[clean] || customLogos[name]) {
-      const customUrl = customLogos[clean] || customLogos[name];
-      LOGO_CACHE.set(clean, customUrl);
-      results[name] = customUrl;
-      continue;
+    for (const c of candidates) {
+      if (customLogos[c] || customLogos[name]) {
+        matched = customLogos[c] || customLogos[name];
+        break;
+      }
     }
 
-    if (LOGO_CACHE.has(clean) && !LOGO_CACHE.get(clean)?.startsWith("data:image/svg+xml")) {
-      results[name] = LOGO_CACHE.get(clean)!;
+    if (!matched) {
+      for (const c of candidates) {
+        if (LOGO_CACHE.has(c) && !LOGO_CACHE.get(c)?.startsWith("data:image/svg+xml")) {
+          matched = LOGO_CACHE.get(c)!;
+          break;
+        }
+      }
+    }
+
+    if (matched) {
+      results[name] = matched;
+      LOGO_CACHE.set(name.toLowerCase().trim(), matched);
     } else {
       unresolved.push(name);
     }
@@ -449,6 +544,11 @@ export async function batchResolveTeamLogos(
           if (url && typeof url === "string" && (url.startsWith("http") || url.startsWith("data:image/"))) {
             LOGO_CACHE.set(team.toLowerCase().trim(), url);
             results[team] = url;
+            // Also cache stripped candidates
+            const candidates = getTeamNameCandidates(team);
+            for (const c of candidates) {
+              LOGO_CACHE.set(c, url);
+            }
           } else {
             results[team] = getTeamLogoUrl(team);
           }
@@ -474,14 +574,22 @@ export async function batchResolveTeamLogos(
           for (const it of items) {
             const n = String(it.name || it.team || it.Team || "").trim().toLowerCase();
             const u = String(it.url || it.logo || it.Logo || "").trim();
-            if (n && u) directMap.set(n, u);
+            if (n && u) {
+              directMap.set(n, u);
+              const stripped = stripTeamBrackets(n).toLowerCase().trim();
+              if (stripped) directMap.set(stripped, u);
+            }
           }
           for (const team of unresolved) {
-            const c = team.toLowerCase().trim();
-            if (directMap.has(c)) {
-              results[team] = directMap.get(c)!;
-              LOGO_CACHE.set(c, directMap.get(c)!);
-              continue;
+            const candidates = getTeamNameCandidates(team);
+            for (const c of candidates) {
+              if (directMap.has(c)) {
+                const u = directMap.get(c)!;
+                results[team] = u;
+                LOGO_CACHE.set(team.toLowerCase().trim(), u);
+                LOGO_CACHE.set(c, u);
+                break;
+              }
             }
           }
         }

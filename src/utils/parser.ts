@@ -1,5 +1,13 @@
 import { MatchItem, MatchGroup } from "../types";
-import { getTeamLogoUrl } from "../data/teamLogos";
+import { getTeamLogoUrl, stripTeamBrackets } from "../data/teamLogos";
+
+/**
+ * Clean and normalize team name from prefixes/suffixes like [10] Goias GO or Levski Sofia [n]
+ */
+export function cleanTeamName(name: string): string {
+  if (!name || typeof name !== "string") return "";
+  return stripTeamBrackets(name);
+}
 
 /**
  * Intelligent parser that decodes raw football prediction script text into structured objects
@@ -59,7 +67,7 @@ export function parseMatchScript(rawText: string): {
 
       // Next should be Home Team
       if (nextIdx < lines.length) {
-        homeTeam = lines[nextIdx];
+        homeTeam = cleanTeamName(lines[nextIdx]);
         nextIdx++;
       }
 
@@ -70,7 +78,7 @@ export function parseMatchScript(rawText: string): {
 
       // Next should be Away Team
       if (nextIdx < lines.length) {
-        awayTeam = lines[nextIdx];
+        awayTeam = cleanTeamName(lines[nextIdx]);
         nextIdx++;
       }
 
@@ -99,8 +107,8 @@ export function parseMatchScript(rawText: string): {
     // Alternative: Check for "Team A VS Team B" in single line
     const vsMatch = line.match(/^(.+?)\s+(?:VS|vs|v|\-)\s+(.+?)(?:\s+([\d]+\s*[\:\-]\s*[\d]+))?$/i);
     if (vsMatch && !isVsLine(line)) {
-      const homeTeam = vsMatch[1].trim();
-      const awayTeam = vsMatch[2].trim();
+      const homeTeam = cleanTeamName(vsMatch[1]);
+      const awayTeam = cleanTeamName(vsMatch[2]);
       const score = vsMatch[3] ? cleanScore(vsMatch[3]) : "0 : 0";
       const matchItem = createMatchItem(
         currentLeague,
