@@ -1,0 +1,68 @@
+import { WallpaperOption } from "../types";
+
+export const WALLPAPER_OPTIONS: WallpaperOption[] = [
+  {
+    id: "night-stadium",
+    name: "Night Stadium (Lampu Sorot)",
+    previewColor: "#0f172a",
+    imageUrl: "https://images.unsplash.com/photo-1508098682722-e99c43a406b2?q=80&w=1200&auto=format&fit=crop",
+    cssBackground: "radial-gradient(circle at 50% 0%, rgba(30, 58, 138, 0.35) 0%, rgba(15, 23, 42, 0.95) 75%), linear-gradient(180deg, #0b1120 0%, #030712 100%)",
+    overlayGradient: "linear-gradient(180deg, rgba(8, 10, 16, 0.72) 0%, rgba(4, 6, 11, 0.9) 100%)",
+  },
+  {
+    id: "golden-arena",
+    name: "Golden Arena VIP",
+    previewColor: "#271b05",
+    imageUrl: "https://images.unsplash.com/photo-1574629810360-7efbbe195018?q=80&w=1200&auto=format&fit=crop",
+    cssBackground: "radial-gradient(circle at 50% 10%, rgba(180, 83, 9, 0.3) 0%, rgba(20, 14, 4, 0.98) 80%), linear-gradient(180deg, #181206 0%, #080602 100%)",
+    overlayGradient: "linear-gradient(180deg, rgba(16, 12, 4, 0.72) 0%, rgba(8, 6, 2, 0.9) 100%)",
+  },
+  {
+    id: "cyber-pitch",
+    name: "Cyber Neon Pitch",
+    previewColor: "#052e16",
+    imageUrl: "https://images.unsplash.com/photo-1522778119026-d647f0596c20?q=80&w=1200&auto=format&fit=crop",
+    cssBackground: "radial-gradient(circle at 50% 20%, rgba(16, 185, 129, 0.25) 0%, rgba(4, 20, 12, 0.96) 80%), linear-gradient(180deg, #041a10 0%, #020b07 100%)",
+    overlayGradient: "linear-gradient(180deg, rgba(3, 14, 10, 0.72) 0%, rgba(2, 8, 6, 0.92) 100%)",
+  },
+  {
+    id: "champions-lights",
+    name: "Midnight Champions",
+    previewColor: "#1e1b4b",
+    imageUrl: "https://images.unsplash.com/photo-1518091043644-c1d4457512c6?q=80&w=1200&auto=format&fit=crop",
+    cssBackground: "radial-gradient(circle at 50% 0%, rgba(99, 102, 241, 0.3) 0%, rgba(15, 15, 35, 0.98) 75%), linear-gradient(180deg, #0f1026 0%, #050510 100%)",
+    overlayGradient: "linear-gradient(180deg, rgba(10, 10, 26, 0.72) 0%, rgba(4, 4, 14, 0.92) 100%)",
+  },
+  {
+    id: "carbon-matrix",
+    name: "Deep Carbon Matrix",
+    previewColor: "#18181b",
+    imageUrl: "https://images.unsplash.com/photo-1489944440615-453fc2b6a9a9?q=80&w=1200&auto=format&fit=crop",
+    cssBackground: "radial-gradient(circle at 50% 30%, rgba(63, 63, 70, 0.2) 0%, rgba(18, 18, 20, 0.98) 80%), linear-gradient(180deg, #141416 0%, #09090b 100%)",
+    overlayGradient: "linear-gradient(180deg, rgba(12, 12, 14, 0.75) 0%, rgba(6, 6, 8, 0.92) 100%)",
+  },
+  {
+    id: "emerald-stadium",
+    name: "Classic Emerald Turf",
+    previewColor: "#064e3b",
+    imageUrl: "https://images.unsplash.com/photo-1577223625816-7546f13df25d?q=80&w=1200&auto=format&fit=crop",
+    cssBackground: "radial-gradient(circle at 50% 0%, rgba(5, 150, 105, 0.3) 0%, rgba(6, 40, 30, 0.96) 75%), linear-gradient(180deg, #052e24 0%, #02140f 100%)",
+    overlayGradient: "linear-gradient(180deg, rgba(4, 18, 14, 0.72) 0%, rgba(2, 10, 8, 0.92) 100%)",
+  },
+  {
+    id: "red-fury-arena",
+    name: "Red Fury Arena",
+    previewColor: "#4c0519",
+    imageUrl: "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8?q=80&w=1200&auto=format&fit=crop",
+    cssBackground: "radial-gradient(circle at 50% 0%, rgba(225, 29, 72, 0.3) 0%, rgba(36, 6, 14, 0.98) 75%), linear-gradient(180deg, #1a040a 0%, #080204 100%)",
+    overlayGradient: "linear-gradient(180deg, rgba(22, 4, 8, 0.72) 0%, rgba(10, 2, 4, 0.92) 100%)",
+  },
+  {
+    id: "cosmic-purple",
+    name: "Cosmic Purple Stadium",
+    previewColor: "#3b0764",
+    imageUrl: "https://images.unsplash.com/photo-1517649763962-0c623266ddc0?q=80&w=1200&auto=format&fit=crop",
+    cssBackground: "radial-gradient(circle at 50% 0%, rgba(168, 85, 247, 0.3) 0%, rgba(24, 6, 42, 0.98) 75%), linear-gradient(180deg, #150422 0%, #08020e 100%)",
+    overlayGradient: "linear-gradient(180deg, rgba(20, 5, 34, 0.72) 0%, rgba(8, 2, 14, 0.92) 100%)",
+  },
+];

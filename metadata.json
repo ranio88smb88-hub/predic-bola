@@ -1,0 +1,6 @@
+{
+  "name": "Football Script Generator",
+  "description": "Royal Edition - Elite luxury football script generator with interactive prediction cards, live preview, embeddable HTML code, custom themes, and probability grids.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

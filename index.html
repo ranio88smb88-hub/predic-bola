@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Football Script Generator - Royal Edition</title>
+    <meta name="description" content="Elite luxury football script generator with interactive prediction cards, live preview, embeddable HTML code, custom themes, and probability grids." />
+    <script>
+      (function() {
+        try {
+          var originalFetch = window.fetch ? window.fetch.bind(window) : undefined;
+          var customFetch = originalFetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return customFetch || originalFetch || window.fetch;
+            },
+            set: function(v) {
+              customFetch = v;
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          try {
+            var protoDesc = Object.getOwnPropertyDescriptor(Window.prototype, 'fetch');
+            if (protoDesc && !protoDesc.set) {
+              var pFetch = window.fetch;
+              Object.defineProperty(Window.prototype, 'fetch', {
+                get: function() {
+                  return pFetch;
+                },
+                set: function(fn) {
+                  pFetch = fn;
+                },
+                configurable: true,
+                enumerable: true
+              });
+            }
+          } catch (_) {}
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
