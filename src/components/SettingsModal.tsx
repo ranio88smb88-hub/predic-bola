@@ -25,6 +25,7 @@ import {
   getStoredDatabaseUrl,
   setStoredCustomLogos,
   setStoredDatabaseUrl,
+  syncDatabase,
 } from "../data/teamLogos";
 
 interface SettingsModalProps {
@@ -108,31 +109,37 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
       setStoredDatabaseUrl(cleanUrl);
       onUpdateSettings({ logoDatabaseUrl: cleanUrl, customTeamLogos: customLogosMap });
 
-      const res = await fetch("/api/logos/config", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          databaseUrl: cleanUrl,
-          customLogos: customLogosMap,
-          reload: true,
-        }),
-      });
+      // Run dual-channel sync (Server API + Direct Browser Fetch + IndexedDB Cache)
+      const result = await syncDatabase(cleanUrl, customLogosMap);
 
-      const data = await res.json();
-      if (data && data.success) {
+      if (result.success) {
         setLogoStats({
-          count: data.count,
-          customCount: data.customCount || Object.keys(customLogosMap).length,
-          total: data.total || data.count,
+          count: result.count,
+          customCount: result.customCount,
+          total: result.total,
           loaded: true,
           loading: false,
-          source: data.source || cleanUrl,
+          source: result.source || cleanUrl,
         });
-        setSyncStatusMsg(`Berhasil sinkronisasi! ${data.count.toLocaleString()} tim terindeks.`);
+
+        const methodLabel =
+          result.method === "server"
+            ? "API Server"
+            : result.method === "client"
+            ? "Koneksi Langsung Browser"
+            : "Cache Lokal";
+
+        setSyncStatusMsg(
+          `✓ Berhasil Sinkronisasi via ${methodLabel}! ${result.total.toLocaleString()} tim terindeks dan siap digunakan.`
+        );
+      } else {
+        setSyncStatusMsg(
+          `Gagal sinkronisasi: ${result.error || "Periksa URL Google Apps Script Anda."} Menggunakan cache offline (${logoStats.total.toLocaleString()} tim).`
+        );
       }
     } catch (e: any) {
       console.error(e);
-      setSyncStatusMsg("Gagal menghubungi server database. Menggunakan cache offline.");
+      setSyncStatusMsg("Gagal sinkronisasi data logo. Menggunakan cache offline yang tersimpan.");
     } finally {
       setIsReloadingLogos(false);
     }
@@ -300,14 +307,24 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
 
         {/* Sync Notification Banner */}
         {syncStatusMsg && (
-          <div className="my-2 p-2.5 rounded-lg bg-emerald-950/80 border border-emerald-500/50 text-emerald-300 text-xs font-mono flex items-center justify-between animate-fade-in">
+          <div
+            className={`my-2 p-2.5 rounded-lg border text-xs font-mono flex items-center justify-between animate-fade-in ${
+              syncStatusMsg.includes("Gagal")
+                ? "bg-amber-950/80 border-amber-500/60 text-amber-300"
+                : "bg-emerald-950/80 border-emerald-500/50 text-emerald-300"
+            }`}
+          >
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              {syncStatusMsg.includes("Gagal") ? (
+                <AlertCircle className="w-4 h-4 text-amber-400 shrink-0" />
+              ) : (
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+              )}
               <span>{syncStatusMsg}</span>
             </div>
             <button
               onClick={() => setSyncStatusMsg(null)}
-              className="text-emerald-400 hover:text-white text-xs font-bold"
+              className="text-slate-400 hover:text-white text-xs font-bold pl-2 cursor-pointer"
             >
               ✕
             </button>

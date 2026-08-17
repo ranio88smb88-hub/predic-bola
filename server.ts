@@ -52,11 +52,17 @@ const POPULAR_ALIASES: Record<string, string[]> = {
   "atletico madrid": ["atletico", "atlético madrid"],
 };
 
-async function loadTeamLogosDatabase(targetUrl?: string) {
+async function loadTeamLogosDatabase(targetUrl?: string, forceReload: boolean = false) {
   if (targetUrl) {
-    currentDatabaseUrl = targetUrl;
+    if (targetUrl !== currentDatabaseUrl) {
+      currentDatabaseUrl = targetUrl;
+      forceReload = true;
+    }
   }
-  if (isLogoDatabaseLoading && loadPromise) {
+  if (!forceReload && isLogoDatabaseLoaded && teamLogosMap.size > 100) {
+    return;
+  }
+  if (isLogoDatabaseLoading && loadPromise && !forceReload) {
     return loadPromise;
   }
 
@@ -64,13 +70,18 @@ async function loadTeamLogosDatabase(targetUrl?: string) {
   console.log(`Fetching team logos from database URL: ${currentDatabaseUrl}...`);
 
   loadPromise = (async () => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 18000);
+
     try {
       const res = await fetch(currentDatabaseUrl, {
+        signal: controller.signal,
         headers: {
           "Accept": "application/json, text/plain, */*",
           "User-Agent": "Mozilla/5.0 (compatible; RoyalPredictionApp/1.0)",
         },
       });
+      clearTimeout(timeoutId);
 
       if (!res.ok) {
         throw new Error(`HTTP error ${res.status}: ${res.statusText}`);
@@ -126,13 +137,16 @@ async function loadTeamLogosDatabase(targetUrl?: string) {
         }
       }
 
-      teamLogosMap = newMap;
-      teamLogosList = list;
-      isLogoDatabaseLoaded = true;
-      console.log(`Successfully indexed ${newMap.size} team logos from database.`);
+      if (newMap.size > 0) {
+        teamLogosMap = newMap;
+        teamLogosList = list;
+        isLogoDatabaseLoaded = true;
+        console.log(`Successfully indexed ${newMap.size} team logos from database.`);
+      }
     } catch (err) {
       console.error("Error loading team logos database:", err);
     } finally {
+      clearTimeout(timeoutId);
       isLogoDatabaseLoading = false;
     }
   })();

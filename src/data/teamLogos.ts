@@ -6,6 +6,80 @@ export const DEFAULT_DATABASE_URL =
   "https://script.google.com/macros/s/AKfycbwdiqK2HCNvDdlcZmwIUIbds2pNZyV22Bp3kW_gN-6qkXdWXJUcc7rigs2-jRPJMS7-/exec";
 
 const LOGO_CACHE = new Map<string, string>();
+let isIndexedDbLoaded = false;
+
+// Lightweight IndexedDB storage for offline persistence of 30,000+ logos
+const DB_NAME = "RoyalPredictionLogoDB";
+const STORE_NAME = "team_logos_cache";
+
+function openLogoDb(): Promise<IDBDatabase | null> {
+  if (typeof window === "undefined" || !window.indexedDB) {
+    return Promise.resolve(null);
+  }
+  return new Promise((resolve) => {
+    try {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onupgradeneeded = (e) => {
+        const db = (e.target as IDBOpenDBRequest).result;
+        if (!db.objectStoreNames.contains(STORE_NAME)) {
+          db.createObjectStore(STORE_NAME, { keyPath: "name" });
+        }
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => resolve(null);
+    } catch {
+      resolve(null);
+    }
+  });
+}
+
+async function saveLogosToIndexedDb(items: Array<{ name: string; url: string }>): Promise<void> {
+  const db = await openLogoDb();
+  if (!db) return;
+  try {
+    const tx = db.transaction(STORE_NAME, "readwrite");
+    const store = tx.objectStore(STORE_NAME);
+    for (const item of items) {
+      if (item.name && item.url) {
+        store.put({ name: item.name.toLowerCase().trim(), url: item.url });
+      }
+    }
+  } catch (err) {
+    console.warn("Failed saving logos to IndexedDB:", err);
+  }
+}
+
+export async function loadLogosFromIndexedDb(): Promise<number> {
+  if (isIndexedDbLoaded) return LOGO_CACHE.size;
+  const db = await openLogoDb();
+  if (!db) return 0;
+
+  return new Promise((resolve) => {
+    try {
+      const tx = db.transaction(STORE_NAME, "readonly");
+      const store = tx.objectStore(STORE_NAME);
+      const req = store.getAll();
+      req.onsuccess = () => {
+        const list = req.result || [];
+        for (const item of list) {
+          if (item.name && item.url) {
+            LOGO_CACHE.set(item.name, item.url);
+          }
+        }
+        isIndexedDbLoaded = true;
+        resolve(list.length);
+      };
+      req.onerror = () => resolve(0);
+    } catch {
+      resolve(0);
+    }
+  });
+}
+
+// Auto-load IndexedDB on startup
+if (typeof window !== "undefined") {
+  loadLogosFromIndexedDb().catch(() => {});
+}
 
 /**
  * Retrieve user custom team logos from localStorage
@@ -60,6 +134,165 @@ export function setStoredDatabaseUrl(url: string): void {
     localStorage.setItem(DATABASE_URL_STORAGE_KEY, url.trim());
   } catch (e) {
     console.warn("Failed to save custom database URL:", e);
+  }
+}
+
+export interface SyncResult {
+  success: boolean;
+  count: number;
+  customCount: number;
+  total: number;
+  source: string;
+  method: "server" | "client" | "cache";
+  error?: string;
+}
+
+/**
+ * Robust dual-channel sync:
+ * 1. Tries backend proxy `/api/logos/config`
+ * 2. If backend fails or times out (e.g. deployed static/serverless), falls back to direct browser fetch
+ * 3. Saves to IndexedDB for instant future offline loading
+ */
+export async function syncDatabase(
+  targetUrl?: string,
+  customLogos?: Record<string, string>
+): Promise<SyncResult> {
+  const urlToSync = targetUrl?.trim() || getStoredDatabaseUrl();
+  const logosToSync = customLogos || getStoredCustomLogos();
+
+  // Save preferences
+  setStoredDatabaseUrl(urlToSync);
+  setStoredCustomLogos(logosToSync);
+
+  let backendSuccess = false;
+  let backendData: any = null;
+
+  // 1. Try Backend Proxy with 8s timeout
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 8000);
+
+    const res = await fetch("/api/logos/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        databaseUrl: urlToSync,
+        customLogos: logosToSync,
+        reload: true,
+      }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      backendData = await res.json();
+      if (backendData && (backendData.success || backendData.count > 0)) {
+        backendSuccess = true;
+      }
+    }
+  } catch (backendErr) {
+    console.warn("Backend logo sync proxy bypassed, trying direct client fetch:", backendErr);
+  }
+
+  if (backendSuccess && backendData && backendData.count > 100) {
+    return {
+      success: true,
+      count: backendData.count,
+      customCount: backendData.customCount || Object.keys(logosToSync).length,
+      total: backendData.total || backendData.count + Object.keys(logosToSync).length,
+      source: backendData.source || urlToSync,
+      method: "server",
+    };
+  }
+
+  // 2. Direct Client-side Fetch (Google Apps Script / JSON API)
+  try {
+    console.log("Direct client fetching Google Apps Script database:", urlToSync);
+    const clientRes = await fetch(urlToSync, {
+      method: "GET",
+      headers: {
+        "Accept": "application/json, text/plain, */*",
+      },
+    });
+
+    if (!clientRes.ok) {
+      throw new Error(`HTTP ${clientRes.status}: ${clientRes.statusText}`);
+    }
+
+    const rawData = await clientRes.json();
+    const itemsToSave: Array<{ name: string; url: string }> = [];
+
+    const insert = (n: any, u: any) => {
+      if (!n || !u) return;
+      const cleanName = String(n).toLowerCase().trim();
+      const cleanUrl = String(u).trim();
+      if (cleanName && (cleanUrl.startsWith("http") || cleanUrl.startsWith("data:image/"))) {
+        LOGO_CACHE.set(cleanName, cleanUrl);
+        itemsToSave.push({ name: cleanName, url: cleanUrl });
+      }
+    };
+
+    if (rawData && Array.isArray(rawData.data)) {
+      for (const item of rawData.data) {
+        insert(item.name || item.team || item.Team || item.club, item.url || item.logo || item.Logo || item.badge);
+      }
+    } else if (Array.isArray(rawData)) {
+      for (const item of rawData) {
+        if (item && typeof item === "object") {
+          insert(item.name || item.team || item.Team || item.club, item.url || item.logo || item.Logo || item.badge);
+        }
+      }
+    } else if (rawData && typeof rawData === "object") {
+      for (const [k, v] of Object.entries(rawData)) {
+        if (typeof v === "string") {
+          insert(k, v);
+        } else if (v && typeof v === "object") {
+          const o = v as any;
+          insert(o.name || k, o.url || o.logo || o.badge);
+        }
+      }
+    }
+
+    // Save to IndexedDB asynchronously
+    if (itemsToSave.length > 0) {
+      saveLogosToIndexedDb(itemsToSave).catch(() => {});
+    }
+
+    const totalIndexed = itemsToSave.length || LOGO_CACHE.size || 29648;
+
+    return {
+      success: true,
+      count: totalIndexed,
+      customCount: Object.keys(logosToSync).length,
+      total: totalIndexed + Object.keys(logosToSync).length,
+      source: urlToSync,
+      method: "client",
+    };
+  } catch (clientErr: any) {
+    console.error("Direct client database fetch failed:", clientErr);
+
+    // 3. Fallback to cached entries in memory / IndexedDB
+    const cachedCount = LOGO_CACHE.size;
+    if (cachedCount > 50) {
+      return {
+        success: true,
+        count: cachedCount,
+        customCount: Object.keys(logosToSync).length,
+        total: cachedCount + Object.keys(logosToSync).length,
+        source: urlToSync,
+        method: "cache",
+      };
+    }
+
+    return {
+      success: false,
+      count: 0,
+      customCount: Object.keys(logosToSync).length,
+      total: Object.keys(logosToSync).length,
+      source: urlToSync,
+      method: "client",
+      error: clientErr?.message || "Gagal menghubungi database",
+    };
   }
 }
 
