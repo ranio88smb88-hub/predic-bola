@@ -4,6 +4,7 @@ import { MatchItem, ColorTheme, WallpaperOption } from "../types";
 import { generateVectorLogoSvg } from "../data/teamLogos";
 import { BigMatchWarpButton } from "./BigMatchWarpButton";
 import { GlowLeagueBadge } from "./GlowLeagueBadge";
+import { StatWarpCard } from "./StatWarpCard";
 
 interface SpecialMatchCarouselProps {
   specialMatches: MatchItem[];
@@ -220,46 +221,25 @@ export const SpecialMatchCarousel: React.FC<SpecialMatchCarouselProps> = ({
             </div>
           </div>
 
-          {/* Pasaran & Prediksi Boxes */}
+          {/* Pasaran & Prediksi Boxes with Big Match Warp Effect */}
           <div className="w-full grid grid-cols-2 gap-3 sm:gap-4 mt-3 pt-3 border-t border-white/10">
-            <div
-              className="bg-black/50 backdrop-blur-md border rounded-xl p-2.5 sm:p-3 text-center flex flex-col items-center justify-center gap-0.5 shadow-lg"
-              style={{ borderColor: theme.primary }}
-            >
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-300 tracking-wider uppercase font-['Rajdhani']">
-                PASARAN HDP
-              </span>
-              <span className="text-base sm:text-xl font-extrabold text-cyan-400 font-['Orbitron'] drop-shadow-[0_0_8px_rgba(34,211,238,0.8)]">
-                {hdpDisplay}
-              </span>
-              <span
-                className="text-[10px] sm:text-[11px] font-bold font-['Montserrat'] truncate"
-                style={{ color: theme.primary }}
-              >
-                {hdpNote}
-              </span>
-            </div>
+            <StatWarpCard
+              label="PASARAN HDP"
+              value={hdpDisplay}
+              subtext={hdpNote}
+              valueColorType="cyan"
+              subtextColorType="gold"
+              theme={theme}
+            />
 
-            <div
-              className="bg-black/50 backdrop-blur-md border rounded-xl p-2.5 sm:p-3 text-center flex flex-col items-center justify-center gap-0.5 shadow-lg"
-              style={{ borderColor: theme.primary }}
-            >
-              <span className="text-[10px] sm:text-[11px] font-bold text-slate-300 tracking-wider uppercase font-['Rajdhani']">
-                PREDIKSI SKOR
-              </span>
-              <span
-                className="text-base sm:text-xl font-extrabold font-['Orbitron']"
-                style={{
-                  color: theme.primary,
-                  textShadow: `0 0 10px ${theme.glow}`,
-                }}
-              >
-                {scoreDisplay}
-              </span>
-              <span className="text-[10px] sm:text-[11px] font-bold text-cyan-300 font-['Montserrat'] truncate">
-                {scoreNote}
-              </span>
-            </div>
+            <StatWarpCard
+              label="PREDIKSI SKOR"
+              value={scoreDisplay}
+              subtext={scoreNote}
+              valueColorType="gold"
+              subtextColorType="cyan"
+              theme={theme}
+            />
           </div>
         </div>
 

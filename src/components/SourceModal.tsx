@@ -26,14 +26,14 @@ export const SourceModal: React.FC<SourceModalProps> = ({
 
   const sourceLinks = isSource1
     ? [
+        { name: "JP Bola Pelangi (Source 1)", url: "https://jpbolepalngi2.pagesco.de/", badge: "Main Feed" },
         { name: "Flashscore Live Fixtures", url: "https://www.flashscore.com", badge: "Live Scores" },
         { name: "SofaScore Football Stats", url: "https://www.sofascore.com", badge: "Detailed Stats" },
-        { name: "Livescore Official", url: "https://www.livescore.com", badge: "Real-time" },
       ]
     : [
+        { name: "JP Bola Pelangi (Source 1)", url: "https://jpbolepalngi2.pagesco.de/", badge: "Main Feed" },
         { name: "AsianBookie Handicap Portal", url: "https://www.asianbookie.com", badge: "Asian HDP" },
         { name: "Oddspedia Market Movement", url: "https://oddspedia.com", badge: "Odds 1X2" },
-        { name: "NowGoal Pro Asian Odds", url: "https://www.nowgoal.com", badge: "Bursa Pasaran" },
       ];
 
   const quickSample1 = `UEFA CHAMPIONS LEAGUE

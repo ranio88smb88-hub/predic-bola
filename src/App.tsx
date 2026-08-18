@@ -218,8 +218,17 @@ export default function App() {
     setRawScriptText(template.rawText);
   };
 
+  // Date change handler synced to settings
+  const handleHeaderDateChange = (newDate: string) => {
+    setHeaderDate(newDate);
+    setSettings((prev) => ({ ...prev, headerDate: newDate }));
+  };
+
   // Settings update
   const handleUpdateSettings = (newSettings: Partial<AppSettings>) => {
+    if (newSettings.headerDate !== undefined) {
+      setHeaderDate(newSettings.headerDate);
+    }
     if (newSettings.logoDatabaseUrl !== undefined) {
       setStoredDatabaseUrl(newSettings.logoDatabaseUrl);
     }
@@ -268,7 +277,7 @@ export default function App() {
           <div className="lg:col-span-5 w-full">
             <CustomizationPanel
               headerDate={headerDate}
-              onChangeHeaderDate={setHeaderDate}
+              onChangeHeaderDate={handleHeaderDateChange}
               selectedWallpaperId={selectedWallpaperId}
               onChangeWallpaper={setSelectedWallpaperId}
               selectedThemeId={selectedThemeId}
@@ -290,7 +299,10 @@ export default function App() {
               groups={parsedGroups}
               theme={currentTheme}
               wallpaper={currentWallpaper}
-              settings={settings}
+              settings={{
+                ...settings,
+                headerDate: headerDate,
+              }}
               generatedHtmlCode={generatedHtmlCode}
               onToggleMatchExpanded={handleToggleMatchExpanded}
               onExpandAllMatches={handleExpandAllMatches}

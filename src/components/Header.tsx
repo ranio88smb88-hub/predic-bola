@@ -4,7 +4,7 @@ import { Sparkles, RefreshCw, FolderDown, ExternalLink, Settings, ShieldCheck } 
 interface HeaderProps {
   onOpenTemplateModal: () => void;
   onOpenSettingsModal: () => void;
-  onOpenSourceModal: (sourceNum: number) => void;
+  onOpenSourceModal?: (sourceNum: number) => void;
   isSyncingLogos?: boolean;
 }
 
@@ -56,29 +56,18 @@ export const Header: React.FC<HeaderProps> = ({
             <span>LOAD TEMPLATE</span>
           </button>
 
-          {/* Source 1 */}
-          <button
+          {/* Source 1 (Direct link to https://jpbolepalngi2.pagesco.de/) */}
+          <a
             id="btn_source_1"
-            type="button"
-            onClick={() => onOpenSourceModal(1)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-950/40 hover:bg-blue-900/60 border border-blue-500/40 hover:border-blue-400 text-blue-300 text-xs font-bold font-mono tracking-wide transition-all cursor-pointer"
-            title="Live Score & Fixture Source 1 (Flashscore/SofaScore)"
+            href="https://jpbolepalngi2.pagesco.de/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-950/40 hover:bg-blue-900/60 border border-blue-500/40 hover:border-blue-400 text-blue-300 text-xs font-bold font-mono tracking-wide transition-all shadow-[0_0_10px_rgba(59,130,246,0.15)] cursor-pointer"
+            title="Buka Source 1: https://jpbolepalngi2.pagesco.de/"
           >
             <span>SOURCE 1</span>
-            <ExternalLink className="w-3 h-3 text-blue-400" />
-          </button>
-
-          {/* Source 2 */}
-          <button
-            id="btn_source_2"
-            type="button"
-            onClick={() => onOpenSourceModal(2)}
-            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-950/40 hover:bg-emerald-900/60 border border-emerald-500/40 hover:border-emerald-400 text-emerald-300 text-xs font-bold font-mono tracking-wide transition-all cursor-pointer"
-            title="Market & Odds Source 2 (AsianBookie/Oddspedia)"
-          >
-            <span>SOURCE 2</span>
-            <ExternalLink className="w-3 h-3 text-emerald-400" />
-          </button>
+            <ExternalLink className="w-3.5 h-3.5 text-blue-400" />
+          </a>
 
           {/* Settings Cog */}
           <button

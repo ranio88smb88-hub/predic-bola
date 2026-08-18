@@ -203,13 +203,110 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
           >
             {/* Widget Container Matching Embed Width */}
             <div
-              className="max-w-[672px] mx-auto rounded-[20px] p-4 sm:p-6 border backdrop-blur-xl transition-all duration-300"
+              className="max-w-[672px] mx-auto rounded-[20px] p-4 sm:p-6 border backdrop-blur-xl transition-all duration-300 relative"
               style={{
                 background: "rgba(6, 8, 13, 0.45)",
                 borderColor: "rgba(255, 255, 255, 0.08)",
                 boxShadow: "0 0 50px rgba(0, 0, 0, 0.8)",
               }}
             >
+              {/* SVG Filter for Electric Turbulent Displacement Border */}
+              <svg
+                className="absolute w-0 h-0 pointer-events-none opacity-0 overflow-hidden"
+                aria-hidden="true"
+              >
+                <defs>
+                  <filter
+                    id="turbulent-displace"
+                    colorInterpolationFilters="sRGB"
+                    x="-20%"
+                    y="-20%"
+                    width="140%"
+                    height="140%"
+                  >
+                    <feTurbulence
+                      type="turbulence"
+                      baseFrequency="0.02"
+                      numOctaves="10"
+                      result="noise1"
+                      seed="1"
+                    />
+                    <feOffset in="noise1" dx="0" dy="0" result="offsetNoise1">
+                      <animate
+                        attributeName="dy"
+                        values="700; 0"
+                        dur="6s"
+                        repeatCount="indefinite"
+                        calcMode="linear"
+                      />
+                    </feOffset>
+
+                    <feTurbulence
+                      type="turbulence"
+                      baseFrequency="0.02"
+                      numOctaves="10"
+                      result="noise2"
+                      seed="1"
+                    />
+                    <feOffset in="noise2" dx="0" dy="0" result="offsetNoise2">
+                      <animate
+                        attributeName="dy"
+                        values="0; -700"
+                        dur="6s"
+                        repeatCount="indefinite"
+                        calcMode="linear"
+                      />
+                    </feOffset>
+
+                    <feTurbulence
+                      type="turbulence"
+                      baseFrequency="0.02"
+                      numOctaves="10"
+                      result="noise1"
+                      seed="2"
+                    />
+                    <feOffset in="noise1" dx="0" dy="0" result="offsetNoise3">
+                      <animate
+                        attributeName="dx"
+                        values="490; 0"
+                        dur="6s"
+                        repeatCount="indefinite"
+                        calcMode="linear"
+                      />
+                    </feOffset>
+
+                    <feTurbulence
+                      type="turbulence"
+                      baseFrequency="0.02"
+                      numOctaves="10"
+                      result="noise2"
+                      seed="2"
+                    />
+                    <feOffset in="noise2" dx="0" dy="0" result="offsetNoise4">
+                      <animate
+                        attributeName="dx"
+                        values="0; -490"
+                        dur="6s"
+                        repeatCount="indefinite"
+                        calcMode="linear"
+                      />
+                    </feOffset>
+
+                    <feComposite in="offsetNoise1" in2="offsetNoise2" result="part1" />
+                    <feComposite in="offsetNoise3" in2="offsetNoise4" result="part2" />
+                    <feBlend in="part1" in2="part2" mode="color-dodge" result="combinedNoise" />
+
+                    <feDisplacementMap
+                      in="SourceGraphic"
+                      in2="combinedNoise"
+                      scale="30"
+                      xChannelSelector="R"
+                      yChannelSelector="B"
+                    />
+                  </filter>
+                </defs>
+              </svg>
+
               {/* 1. Header Banner */}
               <div
                 className="relative rounded-2xl p-5 sm:p-7 mb-5 text-center flex flex-col items-center justify-center gap-3 overflow-hidden border backdrop-blur-md"
@@ -441,21 +538,89 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                             <div
                               key={m.id}
                               onClick={() => onToggleMatchExpanded(m.id)}
-                              className="group relative rounded-2xl p-4 sm:p-5 border cursor-pointer transition-all duration-300 backdrop-blur-md shadow-xl"
+                              className="group relative rounded-[22px] p-[2px] cursor-pointer transition-all duration-300 shadow-2xl"
                               style={{
-                                background: m.isExpanded
-                                  ? (theme.cardBgActive || theme.cardBg)
-                                  : theme.cardBg,
-                                borderColor: m.isExpanded
-                                  ? theme.primary
-                                  : theme.borderRgba || "rgba(255, 255, 255, 0.12)",
+                                background: `linear-gradient(-30deg, ${theme.primary}44, transparent 50%, ${theme.primary}44), linear-gradient(to bottom, #0c101a, #080b12)`,
                                 boxShadow: m.isExpanded
-                                  ? `0 0 28px ${theme.glow}`
-                                  : `0 8px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06)`,
+                                  ? `0 0 35px ${theme.glow}`
+                                  : `0 10px 25px rgba(0, 0, 0, 0.6)`,
                               }}
                             >
-                              {/* Teams Row */}
-                              <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center justify-items-center gap-2 sm:gap-4 mb-3 sm:mb-4">
+                              {/* Electric Border Inner Container & Displacement Layers */}
+                              <div className="absolute inset-0 rounded-[22px] pointer-events-none z-0">
+                                {/* Border Outer with Offset */}
+                                <div
+                                  className="absolute inset-0 rounded-[22px] border-2 pr-1 pb-1"
+                                  style={{
+                                    borderColor: `${theme.primary}80`,
+                                  }}
+                                >
+                                  {/* Main Card with SVG Turbulent Displace Filter */}
+                                  <div
+                                    className="w-full h-full rounded-[22px] border-2 -mt-1 -ml-1"
+                                    style={{
+                                      borderColor: theme.primary,
+                                      filter: "url(#turbulent-displace)",
+                                    }}
+                                  />
+                                </div>
+
+                                {/* Glow Layer 1 */}
+                                <div
+                                  className="absolute inset-0 rounded-[22px] border-2"
+                                  style={{
+                                    borderColor: `${theme.primary}99`,
+                                    filter: "blur(1px)",
+                                  }}
+                                />
+
+                                {/* Glow Layer 2 */}
+                                <div
+                                  className="absolute inset-0 rounded-[22px] border-2"
+                                  style={{
+                                    borderColor: theme.accent || "#ffffff",
+                                    filter: "blur(4px)",
+                                  }}
+                                />
+                              </div>
+
+                              {/* Overlay Layer 1 */}
+                              <div
+                                className="absolute inset-0 rounded-[22px] pointer-events-none opacity-90 mix-blend-overlay scale-[1.05] blur-md z-0"
+                                style={{
+                                  background:
+                                    "linear-gradient(-30deg, white, transparent 30%, transparent 70%, white)",
+                                }}
+                              />
+
+                              {/* Overlay Layer 2 */}
+                              <div
+                                className="absolute inset-0 rounded-[22px] pointer-events-none opacity-50 mix-blend-overlay scale-[1.05] blur-md z-0"
+                                style={{
+                                  background:
+                                    "linear-gradient(-30deg, white, transparent 30%, transparent 70%, white)",
+                                }}
+                              />
+
+                              {/* Background Ambient Glow */}
+                              <div
+                                className="absolute inset-0 rounded-[22px] pointer-events-none blur-xl scale-[1.06] opacity-40 -z-10 transition-opacity duration-300"
+                                style={{
+                                  background: `linear-gradient(-30deg, ${theme.accent}, transparent 40%, ${theme.primary})`,
+                                }}
+                              />
+
+                              {/* Card Content (Elevated above Electric Border) */}
+                              <div
+                                className="relative z-10 w-full rounded-[20px] p-4 sm:p-5 backdrop-blur-md"
+                                style={{
+                                  background: m.isExpanded
+                                    ? "rgba(10, 14, 23, 0.92)"
+                                    : "rgba(8, 12, 20, 0.85)",
+                                }}
+                              >
+                                {/* Teams Row */}
+                                <div className="w-full grid grid-cols-[1fr_auto_1fr] items-center justify-items-center gap-2 sm:gap-4 mb-3 sm:mb-4">
                                 {/* Home Team */}
                                 <div className="w-full flex flex-col items-center text-center gap-2 cursor-pointer transition-all duration-300 hover:scale-110">
                                   <div
@@ -648,6 +813,7 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                                   />
                                 </div>
                               )}
+                              </div>
                             </div>
                           );
                         })}

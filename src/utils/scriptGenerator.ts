@@ -126,89 +126,104 @@ export function generateEmbedHtml(
 
           return `        <!-- Match Card: ${m.homeTeam} vs ${m.awayTeam} -->
         <div class="royal-match-card ${m.isExpanded ? "is-revealed" : ""}" data-match-id="${matchUid}" data-search="${searchTokens}" onclick="window.royalToggleReveal(this)">
-          <div class="royal-teams-row">
-            <!-- Home Team -->
-            <div class="royal-team royal-team-home">
-              <div class="royal-logo-wrapper">
-                <img src="${m.homeLogo || ""}" alt="${m.homeTeam}" class="royal-team-logo" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://flagcdn.com/w320/un.png';" />
-              </div>
-              <span class="royal-team-name">${m.homeTeam.toUpperCase()}</span>
+          <!-- Electric Border Inner Container & Displacement Layers -->
+          <div class="electric-inner-container">
+            <div class="electric-border-outer">
+              <div class="electric-main-card"></div>
             </div>
-
-            <!-- Score & Time Center -->
-            <div class="royal-center-meta">
-              <span class="royal-vs-badge">VS</span>
-              
-              <div class="royal-score-box">
-                <span class="royal-score-val">${scoreHome}</span>
-                <span class="royal-score-sep">:</span>
-                <span class="royal-score-val">${scoreAway}</span>
-              </div>
-
-              <span class="royal-date-time">${m.date ? `${m.date} • ` : ""}${m.time} WIB</span>
-            </div>
-
-            <!-- Away Team -->
-            <div class="royal-team royal-team-away">
-              <div class="royal-logo-wrapper">
-                <img src="${m.awayLogo || ""}" alt="${m.awayTeam}" class="royal-team-logo" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://flagcdn.com/w320/un.png';" />
-              </div>
-              <span class="royal-team-name">${m.awayTeam.toUpperCase()}</span>
-            </div>
+            <div class="electric-glow-layer-1"></div>
+            <div class="electric-glow-layer-2"></div>
           </div>
 
-          <!-- Win Probability Bar Indicator -->
-          <div class="royal-meter-container">
-            <div class="royal-meter-bar royal-meter-home" style="width: ${m.homeProb}%;"></div>
-            <div class="royal-meter-bar royal-meter-away" style="width: ${m.awayProb}%;"></div>
-          </div>
+          <div class="electric-overlay-1"></div>
+          <div class="electric-overlay-2"></div>
+          <div class="electric-background-glow"></div>
 
-          <!-- 4-Grid Probability & Prediction Analytics (Revealed on Click) -->
-          <div class="royal-stats-grid royal-revealed-elem">
-            <div class="royal-stat-box">
-              <span class="royal-stat-label">HANDICAP</span>
-              <span class="royal-stat-value cyan-val">${m.hdp || "0 : 1/2"}</span>
-              <span class="royal-stat-sub gold-val">${m.specialHdpNote || "Favorit Tuan Rumah"}</span>
-            </div>
-            <div class="royal-stat-box">
-              <span class="royal-stat-label">OVER/UNDER</span>
-              <span class="royal-stat-value cyan-val">${m.ou || "Under 2.5"}</span>
-              <span class="royal-stat-sub gold-val">${m.specialScoreNote || "Adu Taktik"}</span>
-            </div>
-            <div class="royal-stat-box">
-              <span class="royal-stat-label">1X2 ODDS</span>
-              <span class="royal-stat-value cyan-val">${m.odds1x2 || "Tuan Rumah Menang"}</span>
-              <span class="royal-stat-sub">Match Pick</span>
-            </div>
-            <div class="royal-stat-box">
-              <span class="royal-stat-label">ACCURACY</span>
-              <span class="royal-stat-value cyan-val">${m.score || "1 : 0"}</span>
-              <span class="royal-stat-sub">Precision</span>
-            </div>
-          </div>
-
-          <!-- Revealed Close Action (Glow Button) -->
-          <div class="royal-close-detail-wrap royal-revealed-elem">
-            <button type="button" class="glow-button royal-glow-btn is-close">
-              <div class="gradient"></div>
-              <div class="glow-btn-body">
-                <div class="glow-orb"></div>
-                <span class="glow-btn-text">TUTUP DETAIL</span>
-                <span class="glow-btn-arrow is-up">▼</span>
+          <div class="royal-card-content">
+            <div class="royal-teams-row">
+              <!-- Home Team -->
+              <div class="royal-team royal-team-home">
+                <div class="royal-logo-wrapper">
+                  <img src="${m.homeLogo || ""}" alt="${m.homeTeam}" class="royal-team-logo" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://flagcdn.com/w320/un.png';" />
+                </div>
+                <span class="royal-team-name">${m.homeTeam.toUpperCase()}</span>
               </div>
-            </button>
-          </div>
 
-          <!-- Clean DETAIL Action Button (Glow Button) -->
-          <div class="royal-detail-btn-wrap royal-locked-elem">
-            <button type="button" class="glow-button royal-glow-btn">
-              <div class="gradient"></div>
-              <div class="glow-btn-body">
-                <div class="glow-orb"></div>
-                <span class="glow-btn-text">DETAIL</span>
-                <span class="glow-btn-arrow">▼</span>
+              <!-- Score & Time Center -->
+              <div class="royal-center-meta">
+                <span class="royal-vs-badge">VS</span>
+                
+                <div class="royal-score-box">
+                  <span class="royal-score-val">${scoreHome}</span>
+                  <span class="royal-score-sep">:</span>
+                  <span class="royal-score-val">${scoreAway}</span>
+                </div>
+
+                <span class="royal-date-time">${m.date ? `${m.date} • ` : ""}${m.time} WIB</span>
               </div>
-            </button>
+
+              <!-- Away Team -->
+              <div class="royal-team royal-team-away">
+                <div class="royal-logo-wrapper">
+                  <img src="${m.awayLogo || ""}" alt="${m.awayTeam}" class="royal-team-logo" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='https://flagcdn.com/w320/un.png';" />
+                </div>
+                <span class="royal-team-name">${m.awayTeam.toUpperCase()}</span>
+              </div>
+            </div>
+
+            <!-- Win Probability Bar Indicator -->
+            <div class="royal-meter-container">
+              <div class="royal-meter-bar royal-meter-home" style="width: ${m.homeProb}%;"></div>
+              <div class="royal-meter-bar royal-meter-away" style="width: ${m.awayProb}%;"></div>
+            </div>
+
+            <!-- 4-Grid Probability & Prediction Analytics (Revealed on Click) -->
+            <div class="royal-stats-grid royal-revealed-elem">
+              <div class="royal-stat-box">
+                <span class="royal-stat-label">HANDICAP</span>
+                <span class="royal-stat-value cyan-val">${m.hdp || "0 : 1/2"}</span>
+                <span class="royal-stat-sub gold-val">${m.specialHdpNote || "Favorit Tuan Rumah"}</span>
+              </div>
+              <div class="royal-stat-box">
+                <span class="royal-stat-label">OVER/UNDER</span>
+                <span class="royal-stat-value cyan-val">${m.ou || "Under 2.5"}</span>
+                <span class="royal-stat-sub gold-val">${m.specialScoreNote || "Adu Taktik"}</span>
+              </div>
+              <div class="royal-stat-box">
+                <span class="royal-stat-label">1X2 ODDS</span>
+                <span class="royal-stat-value cyan-val">${m.odds1x2 || "Tuan Rumah Menang"}</span>
+                <span class="royal-stat-sub">Match Pick</span>
+              </div>
+              <div class="royal-stat-box">
+                <span class="royal-stat-label">ACCURACY</span>
+                <span class="royal-stat-value cyan-val">${m.score || "1 : 0"}</span>
+                <span class="royal-stat-sub">Precision</span>
+              </div>
+            </div>
+
+            <!-- Revealed Close Action (Glow Button) -->
+            <div class="royal-close-detail-wrap royal-revealed-elem">
+              <button type="button" class="glow-button royal-glow-btn is-close">
+                <div class="gradient"></div>
+                <div class="glow-btn-body">
+                  <div class="glow-orb"></div>
+                  <span class="glow-btn-text">TUTUP DETAIL</span>
+                  <span class="glow-btn-arrow is-up">▼</span>
+                </div>
+              </button>
+            </div>
+
+            <!-- Clean DETAIL Action Button (Glow Button) -->
+            <div class="royal-detail-btn-wrap royal-locked-elem">
+              <button type="button" class="glow-button royal-glow-btn">
+                <div class="gradient"></div>
+                <div class="glow-btn-body">
+                  <div class="glow-orb"></div>
+                  <span class="glow-btn-text">DETAIL</span>
+                  <span class="glow-btn-arrow">▼</span>
+                </div>
+              </button>
+            </div>
           </div>
         </div>`;
         })
@@ -242,6 +257,39 @@ ${matchCards}
   Interactive Click-to-Reveal Engine with Glowing Hover & Clean Spacing
 ======================================================== -->
 <div id="royal-predictions-widget" class="royal-theme-${theme.id}">
+  <!-- SVG Filter for Electric Turbulent Displacement Border -->
+  <svg class="royal-svg-defs" aria-hidden="true" style="position: absolute; width: 0; height: 0; overflow: hidden; pointer-events: none;">
+    <defs>
+      <filter id="turbulent-displace" color-interpolation-filters="sRGB" x="-20%" y="-20%" width="140%" height="140%">
+        <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise1" seed="1" />
+        <feOffset in="noise1" dx="0" dy="0" result="offsetNoise1">
+          <animate attributeName="dy" values="700; 0" dur="6s" repeatCount="indefinite" calcMode="linear" />
+        </feOffset>
+
+        <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise2" seed="1" />
+        <feOffset in="noise2" dx="0" dy="0" result="offsetNoise2">
+          <animate attributeName="dy" values="0; -700" dur="6s" repeatCount="indefinite" calcMode="linear" />
+        </feOffset>
+
+        <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise1" seed="2" />
+        <feOffset in="noise1" dx="0" dy="0" result="offsetNoise3">
+          <animate attributeName="dx" values="490; 0" dur="6s" repeatCount="indefinite" calcMode="linear" />
+        </feOffset>
+
+        <feTurbulence type="turbulence" baseFrequency="0.02" numOctaves="10" result="noise2" seed="2" />
+        <feOffset in="noise2" dx="0" dy="0" result="offsetNoise4">
+          <animate attributeName="dx" values="0; -490" dur="6s" repeatCount="indefinite" calcMode="linear" />
+        </feOffset>
+
+        <feComposite in="offsetNoise1" in2="offsetNoise2" result="part1" />
+        <feComposite in="offsetNoise3" in2="offsetNoise4" result="part2" />
+        <feBlend in="part1" in2="part2" mode="color-dodge" result="combinedNoise" />
+
+        <feDisplacementMap in="SourceGraphic" in2="combinedNoise" scale="30" xChannelSelector="R" yChannelSelector="B" />
+      </filter>
+    </defs>
+  </svg>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,700&family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@600;700;800&display=swap');
 
@@ -1179,38 +1227,184 @@ ${matchCards}
       gap: 16px;
     }
 
-    /* 6. Match Card */
+    /* 6. Match Card with Full Electric Border Turbulent Displacement */
     .royal-match-card {
+      padding: 2px;
+      border-radius: 22px;
       position: relative;
-      background: var(--royal-card-bg);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.12);
-      border-radius: 16px;
-      padding: 18px 16px;
+      background: linear-gradient(
+          -30deg,
+          rgba(221, 132, 72, 0.28),
+          transparent 50%,
+          rgba(221, 132, 72, 0.28)
+        ),
+        linear-gradient(
+          to bottom,
+          #0c101a,
+          #080b12
+        );
       cursor: pointer;
       transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
-      will-change: transform, box-shadow, border-color;
-    }
-
-    @media (min-width: 640px) {
-      .royal-match-card {
-        padding: 22px 20px;
-      }
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.6);
+      will-change: transform, box-shadow;
     }
 
     .royal-match-card:hover {
-      border-color: var(--royal-accent);
       transform: translateY(-4px) scale(1.008);
-      background: var(--royal-card-bg-hover);
-      box-shadow: 0 16px 30px rgba(0, 0, 0, 0.7), 0 0 25px var(--royal-glow);
+      box-shadow: 0 16px 35px rgba(0, 0, 0, 0.75), 0 0 30px var(--royal-glow);
     }
 
     .royal-match-card.is-revealed {
-      border-color: var(--royal-border);
-      background: var(--royal-card-bg-active);
-      box-shadow: 0 0 28px var(--royal-glow), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+      box-shadow: 0 0 35px var(--royal-glow);
+    }
+
+    /* Inner container */
+    .electric-inner-container {
+      position: absolute;
+      inset: 0;
+      border-radius: 22px;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    /* Border layers */
+    .electric-border-outer {
+      position: absolute;
+      inset: 0;
+      border: 2px solid rgba(221, 132, 72, 0.5);
+      border-radius: 22px;
+      padding-right: 4px;
+      padding-bottom: 4px;
+    }
+
+    .electric-main-card {
+      width: 100%;
+      height: 100%;
+      border-radius: 22px;
+      border: 2px solid var(--royal-primary, #dd8448);
+      margin-top: -4px;
+      margin-left: -4px;
+      filter: url(#turbulent-displace);
+    }
+
+    /* Glow effects */
+    .electric-glow-layer-1 {
+      border: 2px solid rgba(221, 132, 72, 0.6);
+      border-radius: 22px;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      filter: blur(1px);
+    }
+
+    .electric-glow-layer-2 {
+      border: 2px solid var(--royal-accent, #fde68a);
+      border-radius: 22px;
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      filter: blur(4px);
+    }
+
+    /* Overlay effects */
+    .electric-overlay-1 {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 22px;
+      opacity: 0.9;
+      mix-blend-mode: overlay;
+      transform: scale(1.05);
+      filter: blur(16px);
+      background: linear-gradient(
+        -30deg,
+        white,
+        transparent 30%,
+        transparent 70%,
+        white
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .electric-overlay-2 {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 22px;
+      opacity: 0.5;
+      mix-blend-mode: overlay;
+      transform: scale(1.05);
+      filter: blur(16px);
+      background: linear-gradient(
+        -30deg,
+        white,
+        transparent 30%,
+        transparent 70%,
+        white
+      );
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* Background glow */
+    .electric-background-glow {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      border-radius: 22px;
+      filter: blur(32px);
+      transform: scale(1.06);
+      opacity: 0.4;
+      z-index: -1;
+      background: linear-gradient(
+        -30deg,
+        var(--royal-accent, #fde68a),
+        transparent,
+        var(--royal-primary, #dd8448)
+      );
+      pointer-events: none;
+    }
+
+    .royal-card-content {
+      position: relative;
+      z-index: 2;
+      width: 100%;
+      border-radius: 20px;
+      padding: 16px 14px;
+      background: rgba(8, 12, 20, 0.85);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+    }
+
+    @media (min-width: 640px) {
+      .royal-card-content {
+        padding: 20px 18px;
+      }
+    }
+
+    .royal-match-card.is-revealed .royal-card-content {
+      background: rgba(10, 14, 23, 0.92);
     }
 
     .royal-teams-row {
