@@ -238,10 +238,10 @@ export async function syncDatabase(
   let backendSuccess = false;
   let backendData: any = null;
 
-  // 1. Try Backend Proxy with 8s timeout
+  // 1. Try Backend Proxy with 20s timeout
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 8000);
+    const timeoutId = setTimeout(() => controller.abort(), 20000);
 
     const res = await fetch("/api/logos/config", {
       method: "POST",
@@ -262,7 +262,7 @@ export async function syncDatabase(
       }
     }
   } catch (backendErr) {
-    console.warn("Backend logo sync proxy bypassed, trying direct client fetch:", backendErr);
+    console.warn("Backend logo sync proxy bypassed or timed out, falling back gracefully to instant local/client cache.");
   }
 
   if (backendSuccess && backendData && backendData.count > 100) {

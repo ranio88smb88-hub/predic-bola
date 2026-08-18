@@ -11,6 +11,8 @@ import {
 } from "lucide-react";
 import { MatchGroup, ColorTheme, WallpaperOption, AppSettings } from "../types";
 import { SpecialMatchCarousel } from "./SpecialMatchCarousel";
+import { GlowDetailButton } from "./GlowDetailButton";
+import { GlowLeagueBadge } from "./GlowLeagueBadge";
 import { generateVectorLogoSvg } from "../data/teamLogos";
 import { DEFAULT_SITE_LOGO_URL, DEFAULT_SITE_NAME, DEFAULT_KEYWORDS_TEXT } from "../data/branding";
 
@@ -403,26 +405,21 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                 ) : (
                   filteredGroups.map((group) => (
                     <div key={group.league} className="space-y-3.5 pt-3">
-                      {/* League Header */}
-                      <div className="flex items-center justify-center gap-3 py-1">
+                      {/* League Header with Glowing Shiny Badge */}
+                      <div className="flex items-center justify-center gap-3 py-1.5">
                         <div
                           className="h-[1.5px] flex-1"
                           style={{
                             background: `linear-gradient(90deg, transparent, ${theme.primary})`,
                           }}
                         />
-                        <div className="flex items-center gap-2 px-2 text-center">
-                          <span className="text-base sm:text-lg">🏆</span>
-                          <h3
-                            className="text-xs sm:text-sm font-extrabold uppercase tracking-wider font-['Montserrat']"
-                            style={{
-                              color: theme.primary,
-                              textShadow: `0 0 10px ${theme.glow}`,
-                            }}
-                          >
-                            {group.league}
-                          </h3>
-                        </div>
+                        <GlowLeagueBadge
+                          league={group.league}
+                          icon="🏆"
+                          themePrimary={theme.primary}
+                          themeAccent={theme.accent}
+                          themeGlow={theme.glow}
+                        />
                         <div
                           className="h-[1.5px] flex-1"
                           style={{
@@ -621,35 +618,34 @@ export const PreviewPanel: React.FC<PreviewPanelProps> = ({
                                     </div>
                                   </div>
 
-                                  <div className="pt-1 flex items-center justify-center">
-                                    <span
-                                      className="inline-flex items-center gap-1 px-3.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider font-['Montserrat'] border transition-all"
-                                      style={{
-                                        background: "rgba(0, 0, 0, 0.4)",
-                                        borderColor: "rgba(255,255,255,0.15)",
-                                        color: "#cbd5e1",
+                                  <div className="pt-2 flex items-center justify-center">
+                                    <GlowDetailButton
+                                      label="DETAIL"
+                                      isExpanded={true}
+                                      themePrimary={theme.primary}
+                                      themeAccent={theme.accent}
+                                      themeGlow={theme.glow}
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        onToggleMatchExpanded(m.id);
                                       }}
-                                    >
-                                      <span>TUTUP DETAIL</span>
-                                      <span className="text-[8px]">▲</span>
-                                    </span>
+                                    />
                                   </div>
                                 </div>
                               ) : (
-                                /* Clean DETAIL Label */
+                                /* Clean Glow DETAIL Action Button */
                                 <div className="pt-2 flex items-center justify-center">
-                                  <span
-                                    className="inline-flex items-center gap-1.5 px-4 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider font-['Montserrat'] border shadow-md transition-all group-hover:scale-105"
-                                    style={{
-                                      background: "rgba(0, 0, 0, 0.45)",
-                                      borderColor: theme.primary,
-                                      color: theme.primary,
-                                      boxShadow: `0 0 10px ${theme.glow}`,
+                                  <GlowDetailButton
+                                    label="DETAIL"
+                                    isExpanded={false}
+                                    themePrimary={theme.primary}
+                                    themeAccent={theme.accent}
+                                    themeGlow={theme.glow}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      onToggleMatchExpanded(m.id);
                                     }}
-                                  >
-                                    <span>DETAIL</span>
-                                    <span className="text-[9px]">▼</span>
-                                  </span>
+                                  />
                                 </div>
                               )}
                             </div>

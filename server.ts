@@ -105,6 +105,40 @@ function getTeamCandidates(rawName: string): string[] {
   return Array.from(set);
 }
 
+// Preload essential national and major club crests
+const INSTANT_PRELOAD_LOGOS: Record<string, string> = {
+  "philippines": "https://flagcdn.com/w320/ph.png",
+  "myanmar": "https://flagcdn.com/w320/mm.png",
+  "malaysia": "https://flagcdn.com/w320/my.png",
+  "laos": "https://flagcdn.com/w320/la.png",
+  "indonesia": "https://flagcdn.com/w320/id.png",
+  "thailand": "https://flagcdn.com/w320/th.png",
+  "vietnam": "https://flagcdn.com/w320/vn.png",
+  "singapore": "https://flagcdn.com/w320/sg.png",
+  "cambodia": "https://flagcdn.com/w320/kh.png",
+  "sparta prague": "https://r2.thesportsdb.com/images/media/team/badge/j00qct1718287150.png",
+  "ac sparta praha": "https://r2.thesportsdb.com/images/media/team/badge/j00qct1718287150.png",
+  "shamrock rovers": "https://r2.thesportsdb.com/images/media/team/badge/u1zowj1491504381.png",
+  "flamengo": "https://r2.thesportsdb.com/images/media/team/badge/syptwx1473538074.png",
+  "bolivar": "https://r2.thesportsdb.com/images/media/team/badge/0o5jrz1579798499.png",
+  "river plate": "https://r2.thesportsdb.com/images/media/team/badge/03dmi31645539717.png",
+  "talleres": "https://r2.thesportsdb.com/images/media/team/badge/7hum2t1769310938.png",
+  "fenerbahce": "https://r2.thesportsdb.com/images/media/team/badge/twxxvs1448199691.png",
+  "lugano": "https://r2.thesportsdb.com/images/media/team/badge/2kh2if1567615581.png",
+  "real madrid": "https://r2.thesportsdb.com/images/media/team/badge/vwvwrw1473502969.png",
+  "manchester city": "https://r2.thesportsdb.com/images/media/team/badge/vwpvry1467462651.png",
+  "arsenal": "https://r2.thesportsdb.com/images/media/team/badge/uyhbfe1612467038.png",
+  "bayern munich": "https://r2.thesportsdb.com/images/media/team/badge/m5w6271612467000.png",
+  "barcelona": "https://r2.thesportsdb.com/images/media/team/badge/wq9sir1639406443.png",
+  "liverpool": "https://r2.thesportsdb.com/images/media/team/badge/c8945n1612467048.png",
+};
+
+// Seed in-memory map immediately
+for (const [k, v] of Object.entries(INSTANT_PRELOAD_LOGOS)) {
+  teamLogosMap.set(k.toLowerCase().trim(), v);
+  teamLogosList.push({ name: k, url: v });
+}
+
 async function loadTeamLogosDatabase(targetUrl?: string, forceReload: boolean = false) {
   if (targetUrl) {
     if (targetUrl !== currentDatabaseUrl) {
@@ -124,7 +158,7 @@ async function loadTeamLogosDatabase(targetUrl?: string, forceReload: boolean = 
 
   loadPromise = (async () => {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 18000);
+    const timeoutId = setTimeout(() => controller.abort(), 35000);
 
     try {
       const res = await fetch(currentDatabaseUrl, {
@@ -141,8 +175,8 @@ async function loadTeamLogosDatabase(targetUrl?: string, forceReload: boolean = 
       }
 
       const rawData = await res.json();
-      const newMap = new Map<string, string>();
-      const list: Array<{ name: string; url: string }> = [];
+      const newMap = new Map<string, string>(teamLogosMap);
+      const list: Array<{ name: string; url: string }> = [...teamLogosList];
 
       // Helper to insert item
       const insertItem = (name: any, url: any) => {
@@ -201,8 +235,12 @@ async function loadTeamLogosDatabase(targetUrl?: string, forceReload: boolean = 
         isLogoDatabaseLoaded = true;
         console.log(`Successfully indexed ${newMap.size} team logos from database.`);
       }
-    } catch (err) {
-      console.error("Error loading team logos database:", err);
+    } catch (err: any) {
+      if (err?.name === "AbortError") {
+        console.warn("Background team logos database fetch timed out, using cached and instant preloaded logos.");
+      } else {
+        console.warn("Notice: Team logos database remote fetch bypassed, running on cached/preloaded logos:", err?.message || err);
+      }
     } finally {
       clearTimeout(timeoutId);
       isLogoDatabaseLoading = false;

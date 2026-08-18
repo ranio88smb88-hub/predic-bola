@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { MatchItem, ColorTheme, WallpaperOption } from "../types";
 import { generateVectorLogoSvg } from "../data/teamLogos";
+import { BigMatchWarpButton } from "./BigMatchWarpButton";
+import { GlowLeagueBadge } from "./GlowLeagueBadge";
 
 interface SpecialMatchCarouselProps {
   specialMatches: MatchItem[];
@@ -122,29 +124,30 @@ export const SpecialMatchCarousel: React.FC<SpecialMatchCarouselProps> = ({
 
         {/* Slide Content */}
         <div className="relative z-10 px-4 sm:px-6 pt-3 pb-4 text-center">
-          {/* Badge */}
-          <div className="flex justify-center mb-1.5">
-            <span
-              className="inline-flex items-center gap-1.5 px-3.5 py-0.5 rounded-full text-[10px] sm:text-[11px] font-black tracking-wider uppercase shadow-md"
-              style={{
-                background: `linear-gradient(90deg, ${theme.primary}, ${theme.accent})`,
-                color: "#000000",
-                boxShadow: `0 0 12px ${theme.glow}`,
+          {/* Warp Particle Big Match Button Badge */}
+          <div className="flex justify-center mb-2">
+            <BigMatchWarpButton
+              label={badgeLabel}
+              themePrimary={theme.primary}
+              themeAccent={theme.accent}
+              themeGlow={theme.glow}
+              defaultActive={true}
+              onClick={() => {
+                // Clicking advances to next special match or toggles warp
+                setCurrentIndex((prev) => (prev + 1) % specialMatches.length);
               }}
-            >
-              {badgeLabel}
-            </span>
+            />
           </div>
 
-          {/* League Title */}
-          <div
-            className="text-xs sm:text-sm font-extrabold uppercase tracking-widest text-center mb-3 font-['Montserrat']"
-            style={{
-              color: theme.accent,
-              textShadow: `0 0 10px ${theme.glow}`,
-            }}
-          >
-            {match.league}
+          {/* League Title with Glow Badge */}
+          <div className="flex justify-center mb-3">
+            <GlowLeagueBadge
+              league={match.league}
+              icon="🏆"
+              themePrimary={theme.primary}
+              themeAccent={theme.accent}
+              themeGlow={theme.glow}
+            />
           </div>
 
           {/* Teams Row */}

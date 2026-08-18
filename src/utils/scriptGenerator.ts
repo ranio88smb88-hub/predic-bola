@@ -46,9 +46,21 @@ export function generateEmbedHtml(
 
         return `        <div class="royal-special-slide ${idx === 0 ? "royal-special-slide-active" : ""}" data-slide-index="${idx}">
           <div class="royal-special-badge-wrap">
-            <span class="royal-special-badge">${badgeLabel}</span>
+            <button type="button" class="royal-warp-btn active" onclick="window.royalToggleWarp(this); window.royalNextSpecialSlide(event);" title="Klik untuk toggle efek Big Match / Ganti slide">
+              <span class="royal-warp-btn-text">${badgeLabel}</span>
+              <canvas class="royal-warp-canvas"></canvas>
+            </button>
           </div>
-          <div class="royal-special-league">${m.league.toUpperCase()}</div>
+          <div class="royal-special-league-wrap">
+            <div class="glow-league-badge">
+              <div class="gradient"></div>
+              <div class="glow-league-body">
+                <div class="glow-orb"></div>
+                <span class="royal-trophy-icon" style="position: relative; z-index: 10;">🏆</span>
+                <span class="royal-league-title" style="position: relative; z-index: 10;">${m.league.toUpperCase()}</span>
+              </div>
+            </div>
+          </div>
           
           <div class="royal-special-teams-row">
             <!-- Home Team -->
@@ -175,14 +187,28 @@ export function generateEmbedHtml(
             </div>
           </div>
 
-          <!-- Revealed Close Action -->
+          <!-- Revealed Close Action (Glow Button) -->
           <div class="royal-close-detail-wrap royal-revealed-elem">
-            <span class="royal-close-detail-btn">TUTUP DETAIL ▲</span>
+            <button type="button" class="glow-button royal-glow-btn is-close">
+              <div class="gradient"></div>
+              <div class="glow-btn-body">
+                <div class="glow-orb"></div>
+                <span class="glow-btn-text">TUTUP DETAIL</span>
+                <span class="glow-btn-arrow is-up">▼</span>
+              </div>
+            </button>
           </div>
 
-          <!-- Clean DETAIL Action Button -->
+          <!-- Clean DETAIL Action Button (Glow Button) -->
           <div class="royal-detail-btn-wrap royal-locked-elem">
-            <span class="royal-detail-btn">DETAIL ▼</span>
+            <button type="button" class="glow-button royal-glow-btn">
+              <div class="gradient"></div>
+              <div class="glow-btn-body">
+                <div class="glow-orb"></div>
+                <span class="glow-btn-text">DETAIL</span>
+                <span class="glow-btn-arrow">▼</span>
+              </div>
+            </button>
           </div>
         </div>`;
         })
@@ -192,9 +218,13 @@ export function generateEmbedHtml(
       <div class="royal-league-group" data-league-name="${group.league}">
         <div class="royal-league-header">
           <div class="royal-header-line"></div>
-          <div class="royal-league-title-wrap">
-            <span class="royal-trophy-icon">🏆</span>
-            <h3 class="royal-league-title">${group.league.toUpperCase()}</h3>
+          <div class="glow-league-badge">
+            <div class="gradient"></div>
+            <div class="glow-league-body">
+              <div class="glow-orb"></div>
+              <span class="royal-trophy-icon" style="position: relative; z-index: 10;">🏆</span>
+              <h3 class="royal-league-title" style="position: relative; z-index: 10;">${group.league.toUpperCase()}</h3>
+            </div>
           </div>
           <div class="royal-header-line"></div>
         </div>
@@ -221,25 +251,25 @@ ${matchCards}
       --royal-accent: ${theme.accent};
       --royal-glow: ${theme.glow};
       --royal-border: ${theme.primary};
+      --royal-border-rgba: ${theme.borderRgba || 'rgba(251, 191, 36, 0.4)'};
       --royal-card-bg: ${theme.cardBg};
       --royal-card-bg-hover: ${theme.cardBgHover || theme.cardBg};
       --royal-card-bg-active: ${theme.cardBgActive || theme.cardBg};
       --royal-badge-bg: ${theme.badgeBg};
       
       font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: rgba(6, 8, 13, 0.45);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
+      background: ${wallpaper.cssBackground || "radial-gradient(ellipse at 50% 10%, #171d2b 0%, #080b12 55%, #030408 100%)"};
       color: #f1f5f9;
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 20px;
       padding: 16px;
       max-width: 672px;
       margin: 0 auto;
-      box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+      box-shadow: 0 0 50px rgba(0, 0, 0, 0.85);
       box-sizing: border-box;
       user-select: none;
       -webkit-user-select: none;
+      width: 100%;
     }
 
     @media (min-width: 640px) {
@@ -248,8 +278,15 @@ ${matchCards}
       }
     }
 
+    #royal-predictions-widget,
     #royal-predictions-widget * {
       box-sizing: border-box;
+    }
+
+    #royal-predictions-widget h1,
+    #royal-predictions-widget h2,
+    #royal-predictions-widget h3,
+    #royal-predictions-widget p {
       margin: 0;
       padding: 0;
     }
@@ -259,6 +296,11 @@ ${matchCards}
       flex-direction: column;
       gap: 20px;
       width: 100%;
+    }
+
+    @keyframes royalRotate {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
     }
 
     @keyframes royalMarqueeScroll {
@@ -504,29 +546,76 @@ ${matchCards}
     }
 
     .royal-special-badge-wrap {
-      margin-bottom: 8px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: center;
     }
 
-    .royal-special-badge {
+    .royal-warp-btn {
+      background: #090c14;
+      position: relative;
+      border: 1px solid var(--royal-accent, #fbbf24);
+      cursor: pointer;
+      padding: 2px;
+      border-radius: 9999px;
+      overflow: hidden;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 16px;
-      border-radius: 9999px;
-      background: linear-gradient(90deg, var(--royal-primary), var(--royal-accent));
-      color: #000000;
-      font-family: 'Montserrat', sans-serif;
+      justify-content: center;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 20px var(--royal-glow, rgba(245, 158, 11, 0.5)), 0 6px 20px rgba(0,0,0,0.9);
+      user-select: none;
+      -webkit-user-select: none;
+      outline: none;
+    }
+
+    .royal-warp-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 0 28px var(--royal-glow, rgba(245, 158, 11, 0.8)), 0 8px 24px rgba(0,0,0,0.9);
+    }
+
+    .royal-warp-btn.active {
+      background: #090c14;
+      border: 1px solid var(--royal-accent, #fbbf24);
+    }
+
+    .royal-warp-btn-text {
       font-size: 11px;
-      font-weight: 900;
-      letter-spacing: 0.8px;
+      position: relative;
+      z-index: 200;
+      color: #ffffff;
       text-transform: uppercase;
-      box-shadow: 0 0 12px var(--royal-glow);
+      font-weight: 900;
+      font-family: 'Montserrat', sans-serif;
+      letter-spacing: 1.2px;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 22px;
+      min-height: 36px;
+      border-radius: 9999px;
+      background: rgba(9, 12, 20, 0.92);
+      text-shadow: 0 0 10px var(--royal-accent, #fbbf24), 0 2px 4px rgba(0,0,0,0.9);
     }
 
     @media (min-width: 640px) {
-      .royal-special-badge {
-        font-size: 12px;
+      .royal-warp-btn-text {
+        font-size: 13px;
+        padding: 7px 26px;
+        min-height: 38px;
       }
+    }
+
+    .royal-warp-canvas {
+      z-index: 100;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
     }
 
     .royal-special-league {
@@ -968,12 +1057,72 @@ ${matchCards}
       z-index: 2 !important;
     }
 
+    /* Expand / Collapse All Quick Controls */
+    .royal-expand-controls {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 8px;
+      margin: 12px 0 16px 0;
+      width: 100%;
+    }
+
+    .royal-expand-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      background: var(--royal-badge-bg, rgba(251, 191, 36, 0.15));
+      border: 1px solid var(--royal-border-rgba, rgba(251, 191, 36, 0.4));
+      color: var(--royal-primary);
+      transition: all 0.2s ease;
+      outline: none;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.2;
+      flex-shrink: 0;
+    }
+
+    .royal-expand-btn:hover {
+      background: rgba(251, 191, 36, 0.28);
+      box-shadow: 0 0 10px var(--royal-glow);
+    }
+
+    .royal-collapse-btn {
+      padding: 6px 14px;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(51, 65, 85, 0.8);
+      color: #cbd5e1;
+      transition: all 0.2s ease;
+      outline: none;
+      white-space: nowrap;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1.2;
+      flex-shrink: 0;
+    }
+
+    .royal-collapse-btn:hover {
+      background: rgba(51, 65, 85, 1);
+      color: #ffffff;
+    }
+
     /* 5. League Section Header */
     .royal-league-group {
       display: flex;
       flex-direction: column;
-      gap: 14px;
-      padding-top: 12px;
+      gap: 16px;
+      margin-top: 14px;
     }
 
     .royal-league-header {
@@ -981,7 +1130,8 @@ ${matchCards}
       align-items: center;
       justify-content: center;
       gap: 12px;
-      padding: 4px 0;
+      margin: 16px 0 12px 0;
+      width: 100%;
     }
 
     .royal-header-line {
@@ -992,14 +1142,6 @@ ${matchCards}
 
     .royal-league-header .royal-header-line:last-child {
       background: linear-gradient(90deg, var(--royal-border), transparent);
-    }
-
-    .royal-league-title-wrap {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 0 8px;
-      text-align: center;
     }
 
     .royal-trophy-icon {
@@ -1014,17 +1156,20 @@ ${matchCards}
 
     .royal-league-title {
       font-family: 'Montserrat', sans-serif;
-      font-size: 14px;
-      font-weight: 800;
+      font-size: 12px;
+      font-weight: 900;
       color: var(--royal-primary);
-      letter-spacing: 1.2px;
-      text-shadow: 0 0 10px var(--royal-glow);
+      letter-spacing: 1px;
+      text-shadow: 0 0 10px var(--royal-glow), 0 2px 4px rgba(0, 0, 0, 0.9);
       text-transform: uppercase;
+      margin: 0;
+      line-height: 1.2;
+      white-space: nowrap;
     }
 
     @media (min-width: 640px) {
       .royal-league-title {
-        font-size: 16px;
+        font-size: 14px;
       }
     }
 
@@ -1042,7 +1187,7 @@ ${matchCards}
       -webkit-backdrop-filter: blur(12px);
       border: 1px solid rgba(255, 255, 255, 0.12);
       border-radius: 16px;
-      padding: 16px;
+      padding: 18px 16px;
       cursor: pointer;
       transition: all 0.35s cubic-bezier(0.25, 1, 0.5, 1);
       box-shadow: 0 8px 20px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -1051,7 +1196,7 @@ ${matchCards}
 
     @media (min-width: 640px) {
       .royal-match-card {
-        padding: 20px;
+        padding: 22px 20px;
       }
     }
 
@@ -1075,12 +1220,13 @@ ${matchCards}
       align-items: center;
       justify-items: center;
       gap: 10px;
-      margin-bottom: 16px;
+      margin-bottom: 12px;
     }
 
     @media (min-width: 640px) {
       .royal-teams-row {
         gap: 16px;
+        margin-bottom: 16px;
       }
     }
 
@@ -1098,7 +1244,7 @@ ${matchCards}
     }
 
     .royal-team:hover {
-      transform: scale(1.18) translateY(-4px);
+      transform: scale(1.1);
     }
 
     .royal-logo-wrapper {
@@ -1141,8 +1287,7 @@ ${matchCards}
       letter-spacing: 0.5px;
       text-transform: uppercase;
       max-width: 130px;
-      line-height: 1.35;
-      min-height: 32px;
+      line-height: 1.25;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -1156,24 +1301,23 @@ ${matchCards}
       .royal-team-name {
         font-size: 14px;
         max-width: 160px;
-        min-height: 36px;
       }
     }
 
     /* When cursor moves to team, it expands prominently with theme halo glow */
     .royal-team:hover .royal-logo-wrapper {
       border-color: var(--royal-accent);
-      transform: scale(1.22);
-      box-shadow: 0 0 35px 12px var(--royal-glow), 0 0 18px var(--royal-accent);
+      transform: scale(1.15);
+      box-shadow: 0 0 25px 8px var(--royal-glow), 0 0 12px var(--royal-accent);
     }
 
     .royal-team:hover .royal-team-logo {
-      transform: scale(1.12);
-      filter: drop-shadow(0 0 12px var(--royal-glow));
+      transform: scale(1.08);
+      filter: drop-shadow(0 0 10px var(--royal-glow));
     }
 
     .royal-team:hover .royal-team-name {
-      transform: scale(1.08);
+      transform: scale(1.04);
       color: var(--royal-accent);
       text-shadow: 0 0 12px var(--royal-glow);
     }
@@ -1183,7 +1327,7 @@ ${matchCards}
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 4px;
       padding: 0 4px;
     }
 
@@ -1217,6 +1361,7 @@ ${matchCards}
       align-items: center;
       gap: 8px;
       margin: 2px 0;
+      letter-spacing: 1.5px;
       text-shadow: 0 0 12px var(--royal-glow);
     }
 
@@ -1242,17 +1387,18 @@ ${matchCards}
       width: 100%;
       max-width: 280px;
       height: 6px;
-      margin: 8px auto;
+      margin: 10px auto 14px auto;
       background: rgba(30, 41, 59, 0.6);
       border-radius: 9999px;
       display: flex;
       overflow: hidden;
-      border: 1px solid rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     @media (min-width: 640px) {
       .royal-meter-container {
         max-width: 320px;
+        margin: 12px auto 16px auto;
       }
     }
 
@@ -1265,14 +1411,15 @@ ${matchCards}
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 8px;
-      margin-top: 12px;
-      padding-top: 12px;
-      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      margin-top: 14px;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     @media (min-width: 640px) {
       .royal-stats-grid {
         grid-template-columns: repeat(4, 1fr);
+        gap: 10px;
       }
     }
 
@@ -1342,59 +1489,214 @@ ${matchCards}
       }
     }
 
-    .royal-detail-btn-wrap {
-      padding-top: 8px;
+    .royal-detail-btn-wrap,
+    .royal-close-detail-wrap {
+      margin-top: 10px;
       display: flex;
       align-items: center;
       justify-content: center;
+      width: 100%;
     }
 
-    .royal-detail-btn {
+    /* Glow Button Effect (Aaron Iker) - 1:1 Live Preview Parity */
+    .glow-button {
+      position: relative;
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 4px 18px;
+      justify-content: center;
+      padding: 1.5px;
       border-radius: 9999px;
-      background: rgba(0, 0, 0, 0.45);
-      border: 1px solid var(--royal-border);
-      color: var(--royal-primary);
+      overflow: hidden;
+      border: none;
+      outline: none;
+      background: transparent;
+      cursor: pointer;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6), 0 0 12px var(--royal-glow);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      user-select: none;
+      -webkit-user-select: none;
+      flex-shrink: 0;
+    }
+
+    .glow-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.7), 0 0 16px var(--royal-glow);
+    }
+
+    .glow-button.is-close {
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.7), 0 0 14px rgba(0, 242, 254, 0.45);
+    }
+
+    .glow-button .gradient {
+      position: absolute;
+      inset: -150%;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0deg, var(--royal-primary) 60deg, #ffffff 120deg, var(--royal-accent) 180deg, transparent 240deg);
+      animation: royalRotate linear 2.5s infinite;
+      pointer-events: none;
+    }
+
+    .glow-button.is-close .gradient {
+      background: conic-gradient(from 0deg, transparent 0deg, #00f2fe 60deg, #ffffff 120deg, #38bdf8 180deg, transparent 240deg);
+    }
+
+    .glow-button .glow-btn-body {
+      position: relative;
+      z-index: 10;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 6px 20px;
+      border-radius: 9999px;
+      background-color: rgba(8, 11, 18, 0.94);
+      overflow: hidden;
+      white-space: nowrap;
+      line-height: 1;
+      transition: all 0.3s ease;
+    }
+
+    .glow-button.is-close .glow-btn-body {
+      background-color: rgba(10, 14, 24, 0.95);
+    }
+
+    .glow-btn-text {
+      position: relative;
+      z-index: 10;
       font-family: 'Montserrat', sans-serif;
       font-size: 11px;
       font-weight: 900;
-      letter-spacing: 1px;
+      letter-spacing: 1.5px;
       text-transform: uppercase;
-      box-shadow: 0 0 10px var(--royal-glow);
-      transition: all 0.25s ease;
+      color: #ffffff;
+      text-shadow: 0 0 8px var(--royal-glow);
     }
 
-    .royal-match-card:hover .royal-detail-btn {
-      transform: scale(1.06);
-      border-color: var(--royal-accent);
-      box-shadow: 0 0 15px var(--royal-glow);
+    .glow-button.is-close .glow-btn-text {
+      color: #38bdf8;
+      text-shadow: 0 0 8px rgba(56, 189, 248, 0.8);
     }
 
-    .royal-close-detail-wrap {
-      padding-top: 8px;
+    .glow-btn-arrow {
+      position: relative;
+      z-index: 10;
+      font-size: 9px;
+      font-weight: 900;
+      color: var(--royal-primary, #fbbf24);
+      display: inline-block;
+      transition: transform 0.3s ease;
+    }
+
+    .glow-btn-arrow.is-up {
+      color: #38bdf8;
+      transform: rotate(180deg);
+    }
+
+    /* Glow League Tournament Badge Effect */
+    .royal-special-league-wrap {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 12px;
+    }
+
+    .glow-league-badge {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.5px;
+      border-radius: 9999px;
+      overflow: hidden;
+      box-sizing: border-box;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.6), 0 0 16px var(--royal-glow);
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+      cursor: default;
+      user-select: none;
+      flex-shrink: 0;
+      background: transparent;
+    }
+
+    .glow-league-badge:hover {
+      transform: scale(1.04);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.7), 0 0 22px var(--royal-glow);
+    }
+
+    .glow-league-badge .gradient {
+      position: absolute;
+      inset: -150%;
+      border-radius: 50%;
+      background: conic-gradient(from 0deg, transparent 0deg, var(--royal-primary) 60deg, #ffffff 120deg, var(--royal-accent) 180deg, transparent 240deg);
+      animation: royalRotate linear 3.5s infinite;
+      pointer-events: none;
+    }
+
+    .glow-league-body {
+      position: relative;
+      z-index: 2;
       display: flex;
       align-items: center;
       justify-content: center;
+      gap: 8px;
+      padding: 8px 24px;
+      border-radius: 9999px;
+      background-color: rgba(8, 11, 18, 0.94);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      overflow: hidden;
+      white-space: nowrap;
     }
 
-    .royal-close-detail-btn {
+    @media (min-width: 640px) {
+      .glow-league-body {
+        padding: 8px 28px;
+        gap: 10px;
+      }
+    }
+
+    /* Dynamic Glow Orb following Cursor (Aaron Iker / Live Preview Parity) */
+    .glow-orb {
+      position: absolute;
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      pointer-events: none;
+      filter: blur(12px);
+      -webkit-filter: blur(12px);
+      transform: translate(-50%, -50%);
+      background: var(--royal-accent, #fbbf24);
+      opacity: 0.15;
+      transition: opacity 0.3s ease;
+      z-index: 1;
+      left: 50%;
+      top: 50%;
+    }
+
+    .glow-league-badge:hover .glow-orb {
+      opacity: 0.65;
+    }
+
+    .glow-button .glow-orb {
+      width: 48px;
+      height: 48px;
+      filter: blur(10px);
+      -webkit-filter: blur(10px);
+      opacity: 0.15;
+    }
+
+    .glow-button:hover .glow-orb {
+      opacity: 0.65;
+    }
+
+    .glow-button.is-close .glow-orb {
+      background: #38bdf8;
+    }
+
+    .glow-button-content {
+      position: relative;
+      z-index: 10;
       display: inline-flex;
       align-items: center;
-      gap: 4px;
-      padding: 2px 14px;
-      border-radius: 9999px;
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      color: #cbd5e1;
-      font-family: 'Montserrat', sans-serif;
-      font-size: 10px;
-      font-weight: 700;
-      letter-spacing: 0.8px;
-      text-transform: uppercase;
-      transition: all 0.2s ease;
+      gap: 6px;
     }
 
     /* REVEAL / LOCK TOGGLE MECHANISM */
@@ -1511,6 +1813,12 @@ ${leagueOptionsHtml}
       </div>
     </div>
 
+    <!-- 4b. Expand / Collapse All Quick Controls -->
+    <div class="royal-expand-controls">
+      <button type="button" class="royal-expand-btn" onclick="window.royalExpandAll(true)">Buka Semua Pasaran</button>
+      <button type="button" class="royal-collapse-btn" onclick="window.royalExpandAll(false)">Tutup Semua Pasaran</button>
+    </div>
+
     <!-- 5. Main Fixtures & Predictions List -->
     <div id="royal-matches-container">
 ${fixturesHtml}
@@ -1527,6 +1835,183 @@ ${fixturesHtml}
         if (!card) return;
         card.classList.toggle('is-revealed');
       };
+
+      window.royalExpandAll = function(expand) {
+        var widget = document.getElementById('royal-predictions-widget');
+        var root = widget || document;
+        var cards = root.querySelectorAll('.royal-match-card');
+        cards.forEach(function(card) {
+          if (expand) {
+            card.classList.add('is-revealed');
+          } else {
+            card.classList.remove('is-revealed');
+          }
+        });
+      };
+
+      // Warp Particle Engine for Big Match Buttons
+      window.royalToggleWarp = function(btn) {
+        if (!btn) return;
+        btn.classList.toggle('active');
+      };
+
+      function initWarpButtons() {
+        var widget = document.getElementById('royal-predictions-widget');
+        var root = widget || document;
+        var buttons = root.querySelectorAll('.royal-warp-btn');
+        
+        buttons.forEach(function(btn) {
+          var canvas = btn.querySelector('.royal-warp-canvas');
+          if (!canvas) return;
+          var ctx = canvas.getContext('2d');
+          if (!ctx) return;
+
+          var NUM_PARTICLES = 50;
+          var MAX_Z = 2;
+          var MAX_R = 2.2;
+          var Z_SPD = 2;
+          var PARTICLES = [];
+          var W = canvas.width = btn.offsetWidth || 140;
+          var H = canvas.height = btn.offsetHeight || 32;
+          var XO = W / 2;
+          var YO = H / 2;
+
+          function Vector(x, y, z) {
+            this.x = x;
+            this.y = y;
+            this.z = z;
+          }
+          Vector.prototype.add = function(v) {
+            this.x += v.x;
+            this.y += v.y;
+            this.z += v.z;
+          };
+          Vector.prototype.scale = function(n) {
+            this.x *= n;
+            this.y *= n;
+            this.z *= n;
+          };
+
+          function to2d(v) {
+            var zSafe = Math.max(v.z, 0.05);
+            var X_COORD = v.x - XO,
+                Y_COORD = v.y - YO,
+                PX = X_COORD / zSafe,
+                PY = Y_COORD / zSafe;
+            return [PX + XO, PY + YO];
+          }
+
+          function Particle(x, y, z) {
+            this.pos = new Vector(x, y, z);
+            var X_VEL = 0, Y_VEL = 0, Z_VEL = -Z_SPD;
+            this.vel = new Vector(X_VEL, Y_VEL, Z_VEL);
+            this.vel.scale(0.012);
+            this.fill = "rgba(255,255,255,0.85)";
+            this.stroke = "rgba(251,191,36,0.9)";
+          }
+
+          Particle.prototype.update = function() {
+            this.pos.add(this.vel);
+          };
+
+          Particle.prototype.render = function() {
+            var PIXEL = to2d(this.pos),
+                X = PIXEL[0],
+                Y = PIXEL[1],
+                R = Math.max(0.5, ((MAX_Z - this.pos.z) / MAX_Z) * MAX_R);
+
+            if (X < -10 || X > W + 10 || Y < -10 || Y > H + 10 || this.pos.z <= 0.05) {
+              this.pos.z = MAX_Z;
+              this.pos.x = Math.random() * W;
+              this.pos.y = Math.random() * H;
+            }
+
+            this.update();
+            ctx.beginPath();
+            ctx.fillStyle = this.fill;
+            ctx.strokeStyle = this.stroke;
+            ctx.arc(X, Y, R, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            ctx.closePath();
+          };
+
+          for (var i = 0; i < NUM_PARTICLES; i++) {
+            var X = Math.random() * W,
+                Y = Math.random() * H,
+                Z = Math.random() * MAX_Z;
+            PARTICLES.push(new Particle(X, Y, Z));
+          }
+
+          function resizeCanvas() {
+            W = canvas.width = btn.offsetWidth || 160;
+            H = canvas.height = btn.offsetHeight || 38;
+            XO = W / 2;
+            YO = H / 2;
+          }
+          resizeCanvas();
+          setTimeout(resizeCanvas, 200);
+          setTimeout(resizeCanvas, 800);
+          window.addEventListener('resize', resizeCanvas);
+
+          function loop() {
+            requestAnimationFrame(loop);
+            if (btn.classList.contains('active')) {
+              ctx.fillStyle = "rgba(0,0,0,0.22)";
+              ctx.fillRect(0, 0, W, H);
+              for (var j = 0; j < PARTICLES.length; j++) {
+                PARTICLES[j].render();
+              }
+            } else {
+              ctx.clearRect(0, 0, W, H);
+            }
+          }
+
+          loop();
+        });
+      }
+
+      // Glow Button & League Badge pointer tracking (Aaron Iker / Live Preview Parity)
+      function initGlowButtons() {
+        var widget = document.getElementById('royal-predictions-widget');
+        var root = widget || document;
+        var elements = root.querySelectorAll('.glow-button, .glow-league-badge');
+        elements.forEach(function(el) {
+          var orb = el.querySelector('.glow-orb');
+          el.addEventListener('pointermove', function(e) {
+            var rect = el.getBoundingClientRect();
+            var x = e.clientX - rect.left;
+            var y = e.clientY - rect.top;
+            el.style.setProperty('--pointer-x', x + 'px');
+            el.style.setProperty('--pointer-y', y + 'px');
+            el.style.setProperty('--button-glow-opacity', '0.85');
+            if (orb) {
+              orb.style.left = x + 'px';
+              orb.style.top = y + 'px';
+              orb.style.opacity = '0.65';
+            }
+          });
+          el.addEventListener('pointerenter', function() {
+            if (orb) orb.style.opacity = '0.65';
+          });
+          el.addEventListener('pointerleave', function() {
+            el.style.setProperty('--button-glow-opacity', '0');
+            if (orb) orb.style.opacity = '0.15';
+          });
+        });
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+          initWarpButtons();
+          initGlowButtons();
+        });
+      } else {
+        setTimeout(function() {
+          initWarpButtons();
+          initGlowButtons();
+        }, 100);
+      }
 
       window.royalNextSpecialSlide = function(e) {
         if (e) e.stopPropagation();
